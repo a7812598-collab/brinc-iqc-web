@@ -1932,11 +1932,15 @@ async function saveEdit(){
 // ═══════════════════════════════════════════════════
 const FTYPES=['尺寸量測','幾何公差','外觀檢查','電氣量測','扭力/力量','重量','其他'];
 const EQUIP=['游標卡尺','2.5D','3D','CMM','尺','萬能試驗機','大理石平台','其他'];
-function openMeasModal(id){
+async function openMeasModal(id){
   measId=id;
   const r=H.find(x=>x.id===id);if(!r)return;
   const raw=F[r.sup+'||'+r.part];
   const tpl=Array.isArray(raw)?raw:[];  // safely extract, ignore _drawing prop
+  try{
+    const m=await api('GET','/measurements?iqcId='+id);
+    if(m&&m.samples&&m.samples.length)M[id]=m;
+  }catch(e){console.error('載入量測失敗:',e.message);}
   const ex=M[id];
   measState=ex?JSON.parse(JSON.stringify(ex)):{samples:[]};
   if(!measState.samples.length){
@@ -2119,9 +2123,10 @@ function measAddFeat(cid){
 function measRemFeat(cid,si,fi){
   const st=getMeasState(cid);st.samples[si].features.splice(fi,1);renderMeasBody(cid,st,true);
 }
-function saveMeas(){
+async function saveMeas(){
   M[measId]=JSON.parse(JSON.stringify(measState));
-  lss(SK.M,M);closeModal('measModal');renderHistory();toast('量測資料已儲存');
+  try{await api('POST','/measurements',{iqcId:measId,samples:measState.samples});}catch(e){toast('儲存失敗：'+e.message,true);return;}
+  closeModal('measModal');renderHistory();toast('☁️ 量測資料已儲存');
 }
 
 // ═══════════════════════════════════════════════════
@@ -2185,7 +2190,7 @@ async function addRecord(){
     const resp=await api('POST','/iqc',rec);
     const id=resp.id||nid(H);
     H.push({id,...rec});
-    if(addFeatState.samples.length>0)M[id]=JSON.parse(JSON.stringify(addFeatState));
+    if(addFeatState.samples.length>0){M[id]=JSON.parse(JSON.stringify(addFeatState));try{await api('POST','/measurements',{iqcId:id,samples:addFeatState.samples});}catch(e){console.error('量測儲存失敗:',e.message);}}
     renderHistory();renderDashboard();renderEval();
     clearForm();toast('☁️ 記錄已存入雲端！');showPage('history');
   }catch(e){
@@ -2262,10 +2267,22 @@ async function addPart(){
 async function delPart(id){if(!confirm('確定要刪除？'))return;try{await api('DELETE','/parts/'+id);P=P.filter(p=>p.id!==id);renderParts();toast('☁️ 已從雲端刪除');}catch(e){toast('刪除失敗：'+e.message,true);}}
 
 // Feature template modal
-function openFeatModal(sup,part){
+async function openFeatModal(sup,part){
   featKey=sup+'||'+part;
   document.getElementById('featSub').textContent=`${sup} / ${part}`;
-  renderFeatModal();openModal('featModal');
+  try{
+    const rows=await api('GET','/feats?key='+encodeURIComponent(featKey));
+    const arr=rows.map(r=>({id:r.id,name:r.feat_name,type:r.feat_type,lsl:r.lsl||'',usl:r.usl||'',unit:r.unit||'',equip:r.equip||''}));
+    if(rows[0]&&rows[0].drawing)arr._drawing=rows[0].drawing;
+    F[featKey]=arr;
+  }catch(e){console.error('載入特徵點失敗:',e.message);}
+  renderFeatModal();renderParts();openModal('featModal');
+}
+// 特徵點整批同步到雲端
+function saveFeatsToCloud(fk){
+  const arr=Array.isArray(F[fk])?F[fk]:[];
+  const drawing=(F[fk]&&F[fk]._drawing)||'';
+  api('POST','/feats',{key:fk,feats:arr,drawing}).catch(e=>console.error('特徵點同步失敗:',e.message));
 }
 // Field schema per measurement type
 const FEAT_FIELD_MAP={
@@ -2327,13 +2344,13 @@ function uploadDrawing(inp){
     if(!F[featKey])F[featKey]=[];
     if(!Array.isArray(F[featKey]))F[featKey]=[];
     F[featKey]._drawing=e.target.result;
-    lss(SK.F,F);renderFeatModal();renderParts();toast('Drawing 已上傳');
+    saveFeatsToCloud(featKey);renderFeatModal();renderParts();toast('☁️ Drawing 已上傳');
   };
   fr.readAsDataURL(file);
 }
 function removeDrawing(){
   if(F[featKey])F[featKey]._drawing='';
-  lss(SK.F,F);renderFeatModal();renderParts();
+  saveFeatsToCloud(featKey);renderFeatModal();renderParts();
 }
 function viewDrawing(key){
   const raw=F[key];const d=(raw&&raw._drawing)||'';if(!d)return;
@@ -2342,17 +2359,17 @@ function viewDrawing(key){
 function updFeat(i,k,v){
   if(!F[featKey])F[featKey]=[];
   if(Array.isArray(F[featKey])&&F[featKey][i])F[featKey][i][k]=v;
-  lss(SK.F,F);renderParts();
+  saveFeatsToCloud(featKey);renderParts();
 }
 function addFeat(){
   if(!F[featKey])F[featKey]=[];
   if(!Array.isArray(F[featKey]))F[featKey]=[];
   F[featKey].push({id:Date.now(),name:'特徵點'+(F[featKey].length+1),type:'尺寸量測',lsl:'',usl:'',unit:'mm',equip:''});
-  lss(SK.F,F);renderFeatModal();renderParts();
+  saveFeatsToCloud(featKey);renderFeatModal();renderParts();
 }
 function delFeat(i){
   if(Array.isArray(F[featKey]))F[featKey].splice(i,1);
-  lss(SK.F,F);renderFeatModal();renderParts();
+  saveFeatsToCloud(featKey);renderFeatModal();renderParts();
 }
 
 // ═══════════════════════════════════════════════════
