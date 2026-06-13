@@ -2378,19 +2378,21 @@ async function importHistFile(inp){
   document.getElementById('impHistBody').innerHTML=impHistData.slice(0,5).map(r=>`<tr>${keys.map(k=>`<td>${r[k]||''}</td>`).join('')}</tr>`).join('');
   document.getElementById('impHistPrev').style.display='block';inp.value='';
 }
-function confirmImpHist(){
+async function confirmImpHist(){
   let n=0;
+  toast('匯入中，請稍候…');
   for(const r of impHistData){
     const date=normDate(r['日期']||r['date']||'');
     const sup=r['供應商']||r['supplier']||'';const part=r['料號']||r['part']||'';
     if(!date||!sup||!part)continue;
     const total=parseInt(r['抽樣數']||r['total'])||0;const pass=parseInt(r['合格數']||r['pass'])||0;
     const fail=Math.max(0,total-pass),result=pass===total?'合格':'不合格';
-    H.push({id:nid(H),date,sup,supCode:'',part,pname:r['品名']||r['pname']||'',total,pass,fail,result,oqc:r['OQC報告書號']||r['oqc']||'',note:r['備註']||r['note']||''});n++;
+    const rec={date,sup,supCode:'',part,pname:r['品名']||r['pname']||'',total,pass,fail,result,oqc:r['OQC報告書號']||r['oqc']||'',note:r['備註']||r['note']||''};
+    try{const resp=await api('POST','/iqc',rec);H.push({id:resp.id,...rec});n++;}catch(e){console.error('匯入失敗:',e.message);}
   }
-  lss(SK.H,H);cancelImp('Hist');
+  cancelImp('Hist');
   refreshSups();renderHistory();renderDashboard();renderEval();
-  toast(`已匯入 ${n} 筆記錄`);
+  toast(`☁️ 已匯入 ${n} 筆記錄`);
 }
 async function importPartFile(inp){
   const file=inp.files[0];if(!file)return;
@@ -2402,15 +2404,17 @@ async function importPartFile(inp){
   document.getElementById('impPartBody').innerHTML=impPartData.slice(0,5).map(r=>`<tr>${keys.map(k=>`<td>${r[k]||''}</td>`).join('')}</tr>`).join('');
   document.getElementById('impPartPrev').style.display='block';inp.value='';
 }
-function confirmImpPart(){
+async function confirmImpPart(){
   let n=0;
+  toast('匯入中，請稍候…');
   for(const r of impPartData){
     const sup=r['供應商']||'',part=r['料號']||'';if(!sup||!part)continue;
     if(!P.find(p=>p.sup===sup&&p.part===part)){
-      P.push({id:nid(P),sup,code:r['供應商代碼']||'',part,craft:r['工藝']||'',consec:parseInt(r['免驗連續批門檻'])||10,rate:parseFloat(r['免驗合格率門檻'])||.95,note:r['備註']||''});n++;
+      const rec={sup,code:r['供應商代碼']||'',part,craft:r['工藝']||'',consec:parseInt(r['免驗連續批門檻'])||10,rate:parseFloat(r['免驗合格率門檻'])||.95,note:r['備註']||''};
+      try{const resp=await api('POST','/parts',rec);P.push({id:resp.id,...rec});n++;}catch(e){console.error('匯入失敗:',e.message);}
     }
   }
-  lss(SK.P,P);cancelImp('Part');renderParts();refreshSups();toast(`已匯入 ${n} 筆料號`);
+  cancelImp('Part');renderParts();refreshSups();toast(`☁️ 已匯入 ${n} 筆料號`);
 }
 function cancelImp(t){document.getElementById(`imp${t}Prev`).style.display='none';if(t==='Hist')impHistData=[];else impPartData=[];}
 function dlCSV(content,filename){const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(content);a.download=filename;a.click();}
