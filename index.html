@@ -1349,8 +1349,8 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
 // ══════════════════════════════════════════════════
 // AZURE API 設定 ── 部署後修改以下兩行
 // ══════════════════════════════════════════════════
-const API_BASE = 'https://YOUR_FUNCTIONAPP.azurewebsites.net/api';
-const API_KEY  = 'YOUR_FUNCTION_KEY';
+const API_BASE = 'https://brinc-iqc-fn.azurewebsites.net/api';
+const API_KEY  = '255hf7LaWXm0QIn-wE7U4MH8_-MScT9Vhiq7Z_BnJr8iAzFu-6hxbg==';
 // ══════════════════════════════════════════════════
 
 // API helper（帶 function key 驗證）
@@ -1371,7 +1371,7 @@ const lss=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 // 從 Azure SQL 載入所有資料（取代 localStorage 初始化）
 async function apiLoadAll(){
   try{
-    const [h,p,gs,loans,car,d8,aud,perf,npiRecs,npiIss] = await Promise.all([
+    const [h,p,gs,loans,car,d8,aud,perf] = await Promise.all([
       api('GET','/iqc'),
       api('GET','/parts'),
       api('GET','/gs'),
@@ -1380,9 +1380,8 @@ async function apiLoadAll(){
       api('GET','/8d'),
       api('GET','/audit'),
       api('GET','/perf'),
-      api('GET','/npi'),
-      api('GET','/npi-issues'),
     ]);
+    const npiRecs = []; const npiIss = [];
     H = h.map(r=>({id:r.id,date:normDate(r.date||''),sup:r.sup,supCode:r.sup_code||'',part:r.part,pname:r.pname||'',total:r.total,pass:r.pass,fail:r.fail,result:r.result,oqc:r.oqc||'',note:r.note||''}));
     P = p.map(r=>({id:r.id,sup:r.sup,code:r.code||'',part:r.part,craft:r.craft||'',consec:r.consec,rate:r.rate,note:r.note||''}));
     GS = gs.map(r=>({id:r.id,gsId:r.gs_id,name:r.name,custPart:r.cust_part||'',supPart:r.sup_part||'',sup:r.sup||'',rev:r.rev||'',type:r.type||'',date:normDate(r.date||''),approver:r.approver||'',approveDate:normDate(r.approve_date||''),location:r.location||'',expiry:normDate(r.expiry||''),status:r.status||'庫存中',note:r.note||'',drawingUrl:r.drawing_url||'',fai:r.fai_url||'',ppap:r.ppap_url||'',oqcr:r.oqcr_url||'',photos:r.photos||[]}));
@@ -1881,21 +1880,21 @@ function goPg(p){histPage=p;renderHistory();}
 function clearFilters(){document.getElementById('filterText').value='';document.getElementById('filterSup').value='';document.getElementById('filterResult').value='';histPage=1;renderHistory();}
 function toggleAll(cb){if(cb.checked)filteredH().slice((histPage-1)*PAGE,(histPage-1)*PAGE+PAGE).forEach(r=>selectedIds.add(r.id));else filteredH().slice((histPage-1)*PAGE,(histPage-1)*PAGE+PAGE).forEach(r=>selectedIds.delete(r.id));renderHistory();}
 function toggleOne(id,cb){if(cb.checked)selectedIds.add(id);else selectedIds.delete(id);renderHistory();}
-function batchDelete(){
+async function batchDelete(){
   if(!selectedIds.size)return;
   if(!confirm(`確定要刪除選取的 ${selectedIds.size} 筆記錄？`))return;
+  try{await Promise.all([...selectedIds].map(id=>api('DELETE','/iqc/'+id)));}catch(e){toast('刪除失敗：'+e.message,true);return;}
   H=H.filter(r=>!selectedIds.has(r.id));
   selectedIds.forEach(id=>delete M[id]);
   selectedIds.clear();
-  lss(SK.H,H);lss(SK.M,M);
   renderHistory();renderDashboard();renderEval();
-  toast(`已刪除`);
+  toast(`☁️ 已刪除`);
 }
-function delOne(id){
+async function delOne(id){
   if(!confirm('確定要刪除這筆記錄？'))return;
+  try{await api('DELETE','/iqc/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}
   H=H.filter(r=>r.id!==id);delete M[id];selectedIds.delete(id);
-  lss(SK.H,H);lss(SK.M,M);
-  renderHistory();renderDashboard();renderEval();toast('已刪除');
+  renderHistory();renderDashboard();renderEval();toast('☁️ 已刪除');
 }
 
 // ═══════════════════════════════════════════════════
@@ -1915,7 +1914,7 @@ function calcEditResult(){
   document.getElementById('e_result').value=t>0?(p===t?'合格':'不合格'):'';
   document.getElementById('e_rate').value=t>0?fmt(p/t):'';
 }
-function saveEdit(){
+async function saveEdit(){
   const r=H.find(x=>x.id===editingId);if(!r)return;
   const t=parseInt(document.getElementById('e_total').value)||0;
   const p=parseInt(document.getElementById('e_pass').value)||0;
@@ -1923,8 +1922,9 @@ function saveEdit(){
   ['sup','part','pname','oqc','note'].forEach(f=>r[f]=document.getElementById('e_'+f).value);
   r.date=normDate(document.getElementById('e_date').value);
   r.total=t;r.pass=p;r.fail=t-p;r.result=p===t?'合格':'不合格';
-  lss(SK.H,H);closeModal('editModal');
-  renderHistory();renderDashboard();renderEval();toast('記錄已修改');
+  try{await api('PUT','/iqc/'+editingId,r);}catch(e){toast('儲存失敗：'+e.message,true);return;}
+  closeModal('editModal');
+  renderHistory();renderDashboard();renderEval();toast('☁️ 記錄已修改');
 }
 
 // ═══════════════════════════════════════════════════
@@ -2167,7 +2167,7 @@ function calcResult(){
   document.getElementById('f_rate').value=t>0?fmt(p/t):'';
   document.getElementById('f_result').value=t>0?(p===t?'合格':'不合格'):'';
 }
-function addRecord(){
+async function addRecord(){
   const date=document.getElementById('f_date').value;
   const sup=document.getElementById('f_sup').value;
   const part=document.getElementById('f_part').value;
@@ -2180,12 +2180,18 @@ function addRecord(){
   if(pass>total){toast('合格數不能超過抽樣數',true);return;}
   const fail=total-pass,result=pass===total?'合格':'不合格';
   const supCode=P.find(p=>p.sup===sup&&p.part===part)?.code||'';
-  const id=nid(H);
-  H.push({id,date,sup,supCode,part,pname,total,pass,fail,result,oqc,note});
-  if(addFeatState.samples.length>0)M[id]=JSON.parse(JSON.stringify(addFeatState));
-  lss(SK.H,H);lss(SK.M,M);
-  renderHistory();renderDashboard();renderEval();
-  clearForm();toast('記錄已儲存！');showPage('history');
+  const rec={date,sup,supCode,part,pname,total,pass,fail,result,oqc,note};
+  try{
+    const resp=await api('POST','/iqc',rec);
+    const id=resp.id||nid(H);
+    H.push({id,...rec});
+    if(addFeatState.samples.length>0)M[id]=JSON.parse(JSON.stringify(addFeatState));
+    renderHistory();renderDashboard();renderEval();
+    clearForm();toast('☁️ 記錄已存入雲端！');showPage('history');
+  }catch(e){
+    console.error('儲存失敗:',e.message);
+    toast('儲存失敗：'+e.message,true);
+  }
 }
 function clearForm(){
   ['f_date','f_total','f_pass','f_fail_count','f_result','f_rate','f_oqc','f_note'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
@@ -2239,18 +2245,21 @@ function renderParts(){
     </tr>`;
   }).join('');
 }
-function addPart(){
+async function addPart(){
   const sup=document.getElementById('p_sup').value.trim(),code=document.getElementById('p_code').value.trim();
   const part=document.getElementById('p_part').value.trim(),craft=document.getElementById('p_craft').value.trim();
   const consec=parseInt(document.getElementById('p_consec').value)||10,rate=parseFloat(document.getElementById('p_rate').value)||.95;
   const note=document.getElementById('p_note').value.trim();
   if(!sup||!code||!part||!craft){toast('請填寫供應商、代碼、料號、工藝',true);return;}
-  P.push({id:nid(P),sup,code,part,craft,consec,rate,note});lss(SK.P,P);
-  renderParts();refreshSups();toast('料號已新增');
-  ['p_sup','p_code','p_part','p_craft','p_note'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('p_consec').value='10';document.getElementById('p_rate').value='0.95';
+  try{
+    const resp=await api('POST','/parts',{sup,code,part,craft,consec,rate,note});
+    P.push({id:resp.id||nid(P),sup,code,part,craft,consec,rate,note});
+    renderParts();refreshSups();toast('☁️ 料號已存入雲端');
+    ['p_sup','p_code','p_part','p_craft','p_note'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('p_consec').value='10';document.getElementById('p_rate').value='0.95';
+  }catch(e){console.error('儲存失敗:',e.message);toast('儲存失敗：'+e.message,true);}
 }
-function delPart(id){if(!confirm('確定要刪除？'))return;P=P.filter(p=>p.id!==id);lss(SK.P,P);renderParts();toast('已刪除');}
+async function delPart(id){if(!confirm('確定要刪除？'))return;try{await api('DELETE','/parts/'+id);P=P.filter(p=>p.id!==id);renderParts();toast('☁️ 已從雲端刪除');}catch(e){toast('刪除失敗：'+e.message,true);}}
 
 // Feature template modal
 function openFeatModal(sup,part){
@@ -2968,24 +2977,29 @@ function previewGsPhotos(inp){
     fr.readAsDataURL(file);
   });
 }
-function saveGs(){
+async function saveGs(){
   const gsId=document.getElementById('gs_id').value.trim();
   const name=document.getElementById('gs_name').value.trim();
   const date=document.getElementById('gs_date').value;
   const location=document.getElementById('gs_location').value.trim();
   if(!gsId||!name||!date||!location){toast('請填寫 GS ID、品名、建立日期、存放位置',true);return;}
   const data={gsId,name,custPart:document.getElementById('gs_custpart').value,supPart:document.getElementById('gs_suppart').value,sup:document.getElementById('gs_sup').value,rev:document.getElementById('gs_rev').value,type:document.getElementById('gs_type').value,date,approver:document.getElementById('gs_approver').value,approveDate:document.getElementById('gs_approveDate').value,location,expiry:document.getElementById('gs_expiry').value,note:document.getElementById('gs_note').value,drawingUrl:document.getElementById('gs_drawingUrl').value,fai:document.getElementById('gs_fai').value,ppap:document.getElementById('gs_ppap').value,oqcr:document.getElementById('gs_oqcr').value,photos:gsPhotoData};
-  if(gsEditId){
-    const g=GS.find(x=>x.id===gsEditId);if(!g)return;
-    Object.assign(g,data);toast('已更新');
-  } else {
-    GS.push({id:nid(GS),status:'庫存中',...data});toast('已新增');
-  }
-  lss(SK.GS,GS);closeModal('gsModal');renderGsDashboard();renderGsList();
+  try{
+    if(gsEditId){
+      const g=GS.find(x=>x.id===gsEditId);if(!g)return;
+      await api('PUT','/gs/'+gsEditId,{...g,...data});
+      Object.assign(g,data);toast('☁️ 已更新');
+    } else {
+      const resp=await api('POST','/gs',{status:'庫存中',...data});
+      GS.push({id:resp.id,status:'庫存中',...data});toast('☁️ 已新增');
+    }
+  }catch(e){toast('儲存失敗：'+e.message,true);return;}
+  closeModal('gsModal');renderGsDashboard();renderGsList();
 }
-function delGs(id){
+async function delGs(id){
   if(!confirm('確定要刪除？'))return;
-  GS=GS.filter(g=>g.id!==id);lss(SK.GS,GS);renderGsDashboard();renderGsList();toast('已刪除');
+  try{await api('DELETE','/gs/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}
+  GS=GS.filter(g=>g.id!==id);renderGsDashboard();renderGsList();toast('☁️ 已刪除');
 }
 
 // LOAN
@@ -3032,7 +3046,7 @@ function openLoanAddModal(){
   document.getElementById('loan_due').value='';
   openModal('loanModal');
 }
-function saveLoan(){
+async function saveLoan(){
   const gsId=document.getElementById('loan_gsid').value;
   const outDate=document.getElementById('loan_out').value;
   const person=document.getElementById('loan_person').value.trim();
@@ -3041,10 +3055,13 @@ function saveLoan(){
   const due=document.getElementById('loan_due').value;
   if(!outDate||!person||!dept||!purpose||!due){toast('請填寫所有必填欄位',true);return;}
   const g=GS.find(x=>x.gsId===gsId);
-  LOAN.push({id:nid(LOAN),gsId,gsName:g?.name||'',outDate,person,dept,purpose,dueDate:due,returnDate:'',status:'借出中',note:document.getElementById('loan_note').value});
-  if(g)g.status='借出中';
-  lss(SK.LOAN,LOAN);lss(SK.GS,GS);
-  closeModal('loanModal');renderGsDashboard();renderGsList();renderLoanList();toast('已記錄借出');
+  const rec={gsId,gsName:g?.name||'',outDate,person,dept,purpose,dueDate:due,returnDate:'',status:'借出中',note:document.getElementById('loan_note').value};
+  try{
+    const resp=await api('POST','/loans',rec);
+    LOAN.push({id:resp.id,...rec});
+    if(g){g.status='借出中';await api('PUT','/gs/'+g.id,g);}
+  }catch(e){toast('儲存失敗：'+e.message,true);return;}
+  closeModal('loanModal');renderGsDashboard();renderGsList();renderLoanList();toast('☁️ 已記錄借出');
 }
 function openReturnModal(id){
   const l=LOAN.find(x=>x.id===id);if(!l)return;
@@ -3054,7 +3071,7 @@ function openReturnModal(id){
   document.getElementById('ret_note').value='';
   openModal('returnModal');
 }
-function saveReturn(){
+async function saveReturn(){
   const l=LOAN.find(x=>x.id===loanRetId);if(!l)return;
   const retDate=document.getElementById('ret_date').value;
   if(!retDate){toast('請填寫歸還日期',true);return;}
@@ -3062,12 +3079,16 @@ function saveReturn(){
   const stillOut=LOAN.some(x=>x.gsId===l.gsId&&x.status==='借出中'&&x.id!==loanRetId);
   const g=GS.find(x=>x.gsId===l.gsId);
   if(g&&!stillOut)g.status='庫存中';
-  lss(SK.LOAN,LOAN);lss(SK.GS,GS);
-  closeModal('returnModal');renderGsDashboard();renderGsList();renderLoanList();toast('歸還完成');
+  try{
+    await api('PUT','/loans/'+l.id,l);
+    if(g&&!stillOut)await api('PUT','/gs/'+g.id,g);
+  }catch(e){toast('儲存失敗：'+e.message,true);return;}
+  closeModal('returnModal');renderGsDashboard();renderGsList();renderLoanList();toast('☁️ 歸還完成');
 }
-function delLoan(id){
+async function delLoan(id){
   if(!confirm('確定刪除？'))return;
-  LOAN=LOAN.filter(l=>l.id!==id);lss(SK.LOAN,LOAN);renderLoanList();renderGsDashboard();
+  try{await api('DELETE','/loans/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}
+  LOAN=LOAN.filter(l=>l.id!==id);renderLoanList();renderGsDashboard();toast('☁️ 已刪除');
 }
 
 // ═══════════════════════════════════════════════════
@@ -3269,7 +3290,7 @@ function editCar(id){
   setPhotoSlots(c.ngPhoto||'',c.okPhoto||'','car_ng_body','car_ok_body','car_ng_data','car_ok_data');
   openModal('carModal');
 }
-function saveCar(){
+async function saveCar(){
   const no=document.getElementById('car_no').value.trim();
   const sup=document.getElementById('car_sup').value.trim();
   const desc=document.getElementById('car_desc').value.trim();
@@ -3277,9 +3298,11 @@ function saveCar(){
   const due=document.getElementById('car_due').value;
   if(!no||!sup||!desc||!out||!due){toast('請填寫必填欄位',true);return;}
   const rec={no,sup,part:document.getElementById('car_part').value,source:document.getElementById('car_source').value,desc,sev:document.getElementById('car_sev').value,out,due,status:document.getElementById('car_status').value,reply:document.getElementById('car_reply').value,verify:document.getElementById('car_verify').value,ngPhoto:document.getElementById('car_ng_data').value,okPhoto:document.getElementById('car_ok_data').value};
-  if(carEditId){const idx=CAR_DATA.findIndex(x=>x.id===carEditId);if(idx>=0)CAR_DATA[idx]={...CAR_DATA[idx],...rec};}
-  else CAR_DATA.push({id:nid(CAR_DATA),...rec});
-  lss(SQE_SK.CAR,CAR_DATA);closeModal('carModal');renderSqe();toast('CAR 已儲存');
+  try{
+    if(carEditId){await api('PUT','/car/'+carEditId,rec);const idx=CAR_DATA.findIndex(x=>x.id===carEditId);if(idx>=0)CAR_DATA[idx]={...CAR_DATA[idx],...rec};}
+    else{const resp=await api('POST','/car',rec);CAR_DATA.push({id:resp.id,...rec});}
+  }catch(e){toast('儲存失敗：'+e.message,true);return;}
+  closeModal('carModal');renderSqe();toast('☁️ CAR 已儲存');
   // CAR 關閉 → 提示關閉關聯 8D
   const savedId=carEditId||nid(CAR_DATA)-1;
   const savedCar=CAR_DATA.find(c=>c.id===(carEditId||CAR_DATA[CAR_DATA.length-1].id));
@@ -3288,15 +3311,15 @@ function saveCar(){
     if(linked8D.length>0){
       setTimeout(()=>{
         if(confirm(`CAR 已關閉，關聯的 8D（${linked8D.map(d=>d.no).join(', ')}）尚未關閉，是否一併更新為「已關閉」？`)){
-          linked8D.forEach(d=>{d.status='已關閉';});
-          lss(SQE_SK.D8,D8_DATA);renderSqe();
+          linked8D.forEach(d=>{d.status='已關閉';api('PUT','/8d/'+d.id,d);});
+          renderSqe();
           toast('關聯 8D 已一併關閉');
         }
       },300);
     }
   }
 }
-function delCar(id){if(!confirm('確定刪除？'))return;CAR_DATA=CAR_DATA.filter(c=>c.id!==id);lss(SQE_SK.CAR,CAR_DATA);renderCar();renderSqe();}
+async function delCar(id){if(!confirm('確定刪除？'))return;try{await api('DELETE','/car/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}CAR_DATA=CAR_DATA.filter(c=>c.id!==id);renderCar();renderSqe();toast('☁️ 已刪除');}
 
 // IQC 不合格 → 開 CAR
 function openCarFromIqc(recId){
@@ -3373,7 +3396,7 @@ function editD8(id){
   },50);
   openModal('d8Modal');
 }
-function save8D(){
+async function save8D(){
   const no=document.getElementById('d8_no').value.trim();
   const sup=document.getElementById('d8_sup').value.trim();
   const title=document.getElementById('d8_title').value.trim();
@@ -3382,16 +3405,18 @@ function save8D(){
   for(let n=1;n<=8;n++){const el=document.getElementById(`d8_content_${n}`);if(el)contents[n]=el.value;}
   const carIdVal=document.getElementById('d8_car').value;
   const rec={no,sup,part:document.getElementById('d8_part').value,title,step:d8CurrentStep,carId:carIdVal?parseInt(carIdVal):null,open:document.getElementById('d8_open').value,target:document.getElementById('d8_target').value,status:document.getElementById('d8_status').value,contents,ngPhoto:document.getElementById('d8_ng_data').value,okPhoto:document.getElementById('d8_ok_data').value};
-  if(d8EditId){const idx=D8_DATA.findIndex(x=>x.id===d8EditId);if(idx>=0)D8_DATA[idx]={...D8_DATA[idx],...rec};}
-  else D8_DATA.push({id:nid(D8_DATA),...rec});
-  lss(SQE_SK.D8,D8_DATA);closeModal('d8Modal');renderSqe();toast('8D 已儲存');
+  try{
+    if(d8EditId){await api('PUT','/8d/'+d8EditId,rec);const idx=D8_DATA.findIndex(x=>x.id===d8EditId);if(idx>=0)D8_DATA[idx]={...D8_DATA[idx],...rec};}
+    else{const resp=await api('POST','/8d',rec);D8_DATA.push({id:resp.id,...rec});}
+  }catch(e){toast('儲存失敗：'+e.message,true);return;}
+  closeModal('d8Modal');renderSqe();toast('☁️ 8D 已儲存');
   // 8D 關閉 → 自動將關聯 CAR 狀態更新為「驗證中」
   const savedD8=d8EditId?D8_DATA.find(x=>x.id===d8EditId):D8_DATA[D8_DATA.length-1];
   if(rec.status==='已關閉'&&savedD8?.carId){
     const linkedCar=CAR_DATA.find(c=>c.id===savedD8.carId);
     if(linkedCar&&linkedCar.status!=='已關閉'){
       linkedCar.status='驗證中';
-      lss(SQE_SK.CAR,CAR_DATA);
+      api('PUT','/car/'+linkedCar.id,linkedCar);
       toast('8D 已關閉 → 關聯 CAR 自動更新為「驗證中」');
     }
   }
@@ -3435,7 +3460,7 @@ function render8D(){
   document.getElementById('d8Pag').innerHTML=pg+`<span class="pg-info">${start+1}–${Math.min(start+PAGE,data.length)} / ${data.length}</span>`;
 }
 function d8Go(p){d8Page=p;render8D();}
-function delD8(id){if(!confirm('確定刪除？'))return;D8_DATA=D8_DATA.filter(d=>d.id!==id);lss(SQE_SK.D8,D8_DATA);render8D();renderSqe();}
+async function delD8(id){if(!confirm('確定刪除？'))return;try{await api('DELETE','/8d/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}D8_DATA=D8_DATA.filter(d=>d.id!==id);render8D();renderSqe();toast('☁️ 已刪除');}
 
 // ── AUDIT ──
 let auditEditId=null;
@@ -3487,7 +3512,7 @@ function editAudit(id){
   document.getElementById('aud_recheck').value=a.recheck||'';document.getElementById('aud_summary').value=a.summary||'';
   renderAuditFindings();openModal('auditModal');
 }
-function saveAudit(){
+async function saveAudit(){
   const no=document.getElementById('aud_no').value.trim();const sup=document.getElementById('aud_sup').value.trim();
   const date=document.getElementById('aud_date').value;
   if(!no||!sup||!date){toast('請填寫必填欄位',true);return;}
@@ -3495,9 +3520,11 @@ function saveAudit(){
   const majorN=auditFindingsList.filter(f=>f.sev==='Major').length;
   const minorN=auditFindingsList.filter(f=>f.sev==='Minor').length;
   const rec={no,sup,type:document.getElementById('aud_type').value,date,person:document.getElementById('aud_person').value,score,grade:document.getElementById('aud_grade').value,status:document.getElementById('aud_status').value,recheck:document.getElementById('aud_recheck').value,summary:document.getElementById('aud_summary').value,findings:JSON.parse(JSON.stringify(auditFindingsList)),majorN,minorN};
-  if(auditEditId){const idx=AUD_DATA.findIndex(x=>x.id===auditEditId);if(idx>=0)AUD_DATA[idx]={...AUD_DATA[idx],...rec};}
-  else AUD_DATA.push({id:nid(AUD_DATA),...rec});
-  lss(SQE_SK.AUD,AUD_DATA);closeModal('auditModal');renderSqe();toast('稽核已儲存');
+  try{
+    if(auditEditId){await api('PUT','/audit/'+auditEditId,rec);const idx=AUD_DATA.findIndex(x=>x.id===auditEditId);if(idx>=0)AUD_DATA[idx]={...AUD_DATA[idx],...rec};}
+    else{const resp=await api('POST','/audit',rec);AUD_DATA.push({id:resp.id,...rec});}
+  }catch(e){toast('儲存失敗：'+e.message,true);return;}
+  closeModal('auditModal');renderSqe();toast('☁️ 稽核已儲存');
   // 自動提示：Major 缺失 → 開 CAR
   if(majorN>0&&!auditEditId){
     setTimeout(()=>{
@@ -3533,7 +3560,7 @@ function renderAudit(){
     </td>
   </tr>`).join('');
 }
-function delAudit(id){if(!confirm('確定刪除？'))return;AUD_DATA=AUD_DATA.filter(a=>a.id!==id);lss(SQE_SK.AUD,AUD_DATA);renderAudit();renderSqe();}
+async function delAudit(id){if(!confirm('確定刪除？'))return;try{await api('DELETE','/audit/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}AUD_DATA=AUD_DATA.filter(a=>a.id!==id);renderAudit();renderSqe();toast('☁️ 已刪除');}
 
 // ── PERF ──
 function calcPerfScore(){
@@ -3586,13 +3613,15 @@ function editPerf(id){
   document.getElementById('pf_note').value=p.note||'';
   openModal('perfModal');
 }
-function savePerf(){
+async function savePerf(){
   const sup=document.getElementById('pf_sup').value.trim();const period=document.getElementById('pf_period').value.trim();
   if(!sup||!period){toast('請填寫供應商和評分週期',true);return;}
   const rec={sup,period,otd:parseFloat(document.getElementById('pf_otd').value)||0,qual:parseFloat(document.getElementById('pf_qual').value)||0,d8:parseFloat(document.getElementById('pf_8d').value)||0,doc:parseFloat(document.getElementById('pf_doc').value)||0,score:parseInt(document.getElementById('pf_score').value)||0,grade:document.getElementById('pf_grade').value,note:document.getElementById('pf_note').value};
-  if(perfEditId){const idx=PERF_DATA.findIndex(x=>x.id===perfEditId);if(idx>=0)PERF_DATA[idx]={...PERF_DATA[idx],...rec};}
-  else PERF_DATA.push({id:nid(PERF_DATA),...rec});
-  lss(SQE_SK.PERF,PERF_DATA);closeModal('perfModal');renderPerf();renderSqe();toast('績效已儲存');
+  try{
+    if(perfEditId){await api('PUT','/perf/'+perfEditId,rec);const idx=PERF_DATA.findIndex(x=>x.id===perfEditId);if(idx>=0)PERF_DATA[idx]={...PERF_DATA[idx],...rec};}
+    else{const resp=await api('POST','/perf',rec);PERF_DATA.push({id:resp.id,...rec});}
+  }catch(e){toast('儲存失敗：'+e.message,true);return;}
+  closeModal('perfModal');renderPerf();renderSqe();toast('☁️ 績效已儲存');
 }
 function renderPerf(){
   const tbody=document.getElementById('perfTbody');if(!tbody)return;
@@ -3612,7 +3641,7 @@ function renderPerf(){
     </tr>`;
   }).join('');
 }
-function delPerf(id){if(!confirm('確定刪除？'))return;PERF_DATA=PERF_DATA.filter(p=>p.id!==id);lss(SQE_SK.PERF,PERF_DATA);renderPerf();}
+async function delPerf(id){if(!confirm('確定刪除？'))return;try{await api('DELETE','/perf/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}PERF_DATA=PERF_DATA.filter(p=>p.id!==id);renderPerf();toast('☁️ 已刪除');}
 
 // ═══════════════════════════════════════════════════
 // HEALTH BOARD — 跨模組查詢
