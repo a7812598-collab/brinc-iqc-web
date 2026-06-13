@@ -7,41 +7,81 @@
 <style>
 :root{
   --bg:#f0f4ff;--surface:#ffffff;--surface2:#f5f7ff;--border:#e2e8f8;
-  --accent:#4361ee;--accent2:#7c3aed;--pass:#059669;--fail:#dc2626;--warn:#d97706;--npi:#0891b2;
+  --accent:#0891b2;--accent2:#0e7490;--pass:#059669;--fail:#dc2626;--warn:#d97706;--npi:#6366f1;
   --text:#1e2a4a;--text2:#4a5580;--text3:#8892b8;
-  --shadow:0 2px 12px rgba(67,97,238,.08);--shadow-md:0 4px 24px rgba(67,97,238,.13);
+  --shadow:0 2px 12px rgba(8,145,178,.08);--shadow-md:0 4px 24px rgba(8,145,178,.13);
   --font:'Segoe UI','Noto Sans TC',system-ui,sans-serif;--mono:'Cascadia Code','Consolas',monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5;min-height:100vh;}
-.app{display:flex;flex-direction:column;min-height:100vh;}
-header{background:linear-gradient(135deg,#4361ee 0%,#7c3aed 100%);padding:0 24px;display:flex;align-items:center;gap:12px;height:56px;position:sticky;top:0;z-index:200;box-shadow:0 2px 16px rgba(67,97,238,.3);}
-.logo{font-size:17px;font-weight:800;color:#fff;letter-spacing:-.3px;}.logo span{color:#c7d2fe;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5;min-height:100vh;position:relative;}
+/* === 微光暈動態背景(加強版)=== */
+body::before{content:'';position:fixed;inset:0;z-index:-2;background:linear-gradient(135deg,#e8f5f8 0%,#eef6f8 50%,#e9f3f7 100%);}
+body::after{content:'';position:fixed;inset:-30%;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(560px circle at 15% 20%, rgba(8,145,178,.42), transparent 55%),
+    radial-gradient(620px circle at 85% 15%, rgba(99,102,241,.36), transparent 55%),
+    radial-gradient(660px circle at 75% 80%, rgba(14,116,144,.40), transparent 55%),
+    radial-gradient(520px circle at 25% 85%, rgba(5,150,105,.34), transparent 55%);
+  animation:bgFloat 12s ease-in-out infinite;}
+@keyframes bgFloat{
+  0%,100%{transform:translate(0,0) scale(1);}
+  25%{transform:translate(6%,-4%) scale(1.12);}
+  50%{transform:translate(-4%,5%) scale(1.05);}
+  75%{transform:translate(4%,3%) scale(1.1);}
+}
+/* 浮動光球 */
+.orb{position:fixed;border-radius:50%;z-index:-1;pointer-events:none;filter:blur(44px);opacity:.72;}
+.orb.o1{width:380px;height:380px;background:radial-gradient(circle,rgba(8,145,178,.85),transparent 70%);top:-80px;left:6%;animation:orbA 11s ease-in-out infinite;}
+.orb.o2{width:440px;height:440px;background:radial-gradient(circle,rgba(99,102,241,.72),transparent 70%);bottom:-100px;right:8%;animation:orbB 14s ease-in-out infinite;}
+.orb.o3{width:320px;height:320px;background:radial-gradient(circle,rgba(5,150,105,.7),transparent 70%);top:42%;left:52%;animation:orbC 12s ease-in-out infinite;}
+.orb.o4{width:300px;height:300px;background:radial-gradient(circle,rgba(14,116,144,.7),transparent 70%);top:20%;right:32%;animation:orbA 9s ease-in-out infinite reverse;}
+.orb.o5{width:260px;height:260px;background:radial-gradient(circle,rgba(6,182,212,.68),transparent 70%);bottom:18%;left:30%;animation:orbC 15s ease-in-out infinite;}
+@keyframes orbA{0%,100%{transform:translate(0,0)}50%{transform:translate(80px,110px)}}
+@keyframes orbB{0%,100%{transform:translate(0,0)}50%{transform:translate(-100px,-80px)}}
+@keyframes orbC{0%,100%{transform:translate(0,0)}33%{transform:translate(-90px,60px)}66%{transform:translate(70px,-70px)}}
+@media(prefers-reduced-motion:reduce){body::after,.orb{animation:none;}}
+.app{display:flex;flex-direction:column;min-height:100vh;position:relative;z-index:1;}
+header{background:linear-gradient(135deg,#0e7490 0%,#0891b2 55%,#0369a1 100%);padding:0 24px;display:flex;align-items:center;gap:12px;height:60px;position:sticky;top:0;z-index:200;box-shadow:0 2px 16px rgba(8,145,178,.25);}
+.logo{display:flex;align-items:center;gap:11px;}
+.logo-mark{width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;overflow:hidden;flex-shrink:0;}
+.logo-mark img{width:100%;height:100%;object-fit:contain;}
+.logo-text{display:flex;flex-direction:column;line-height:1.2;font-size:15px;font-weight:800;color:#fff;letter-spacing:-.2px;}
+.logo-text span{font-size:10px;font-weight:600;color:rgba(255,255,255,.78);letter-spacing:.4px;}
 .badge{background:rgba(255,255,255,.25);color:#fff;font-size:10px;padding:2px 8px;border-radius:99px;font-weight:700;border:1px solid rgba(255,255,255,.3);}
 .spacer{flex:1}.date-badge{color:rgba(255,255,255,.75);font-size:12px;}
-nav{display:flex;padding:0 20px;background:#fff;border-bottom:2px solid var(--border);overflow-x:auto;box-shadow:var(--shadow);}
-nav button{background:none;border:none;color:var(--text2);padding:11px 14px;cursor:pointer;font-size:13px;font-weight:600;border-bottom:3px solid transparent;transition:all .15s;white-space:nowrap;margin-bottom:-2px;}
-nav button:hover{color:var(--accent);background:rgba(67,97,238,.05);}
-nav button.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(67,97,238,.06);}
-main{flex:1;padding:20px;max-width:1440px;margin:0 auto;width:100%;}
+.layout{display:flex;flex:1;min-height:0;}
+.sidebar{width:212px;flex-shrink:0;background:#fff;border-right:1px solid var(--border);padding:14px 10px;display:flex;flex-direction:column;gap:3px;overflow-y:auto;box-shadow:2px 0 10px rgba(0,0,0,.02);}
+.sidebar button{display:flex;align-items:center;gap:10px;background:none;border:none;color:var(--text2);padding:10px 14px;cursor:pointer;font-size:13.5px;font-weight:600;border-radius:9px;transition:all .15s;text-align:left;white-space:nowrap;}
+.sidebar button:hover{color:var(--accent);background:rgba(8,145,178,.09);transform:translateX(3px);}
+.sidebar button.active{color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 3px 10px rgba(8,145,178,.3);}
+main{flex:1;padding:24px;width:100%;overflow-x:auto;min-width:0;}
+@media(max-width:768px){
+  .layout{flex-direction:column;}
+  .sidebar{width:100%;flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--border);padding:8px;}
+  .sidebar button{flex-shrink:0;}
+  .sidebar button:hover{transform:none;}
+}
 .page{display:none}.page.active{display:block}
 .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:20px;}
-.kpi{background:#fff;border:none;border-radius:14px;padding:18px 18px 14px;box-shadow:var(--shadow);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s;}
-.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));}
-.kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
-.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:7px;font-weight:600;}
-.kpi-value{font-size:28px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;}
+.kpi{background:linear-gradient(160deg,#ffffff 0%,#f4fcfd 100%);border:1px solid var(--border);border-radius:16px;padding:19px 18px 15px;box-shadow:0 2px 12px rgba(0,0,0,.04);position:relative;overflow:hidden;transition:transform .2s ease,box-shadow .2s ease;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:.95;}
+.kpi:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(8,145,178,.16);}
+.kpi:has(.kpi-value.pass)::before{background:linear-gradient(90deg,var(--pass),#34d399);}
+.kpi:has(.kpi-value.fail)::before{background:linear-gradient(90deg,var(--fail),#fb7185);}
+.kpi:has(.kpi-value.warn)::before{background:linear-gradient(90deg,var(--warn),#fbbf24);}
+.kpi-label{font-size:10.5px;text-transform:uppercase;letter-spacing:1.3px;color:var(--text3);margin-bottom:9px;font-weight:700;}
+.kpi-value{font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.5px;}
 .kpi-value.pass{color:var(--pass)}.kpi-value.fail{color:var(--fail)}.kpi-value.accent{color:var(--accent)}.kpi-value.warn{color:var(--warn)}
 .kpi-sub{font-size:11px;color:var(--text3);margin-top:4px;}
-.section{background:#fff;border:none;border-radius:14px;margin-bottom:16px;overflow:hidden;box-shadow:var(--shadow);}
-.section-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;background:linear-gradient(135deg,#f8f9ff 0%,#fff 100%);}
+.section{background:rgba(255,255,255,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.6);border-radius:14px;margin-bottom:16px;overflow:hidden;box-shadow:0 4px 20px rgba(8,145,178,.06);}
+.section-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;background:linear-gradient(135deg,#f0f8fa 0%,#fff 100%);}
 .section-title{font-size:14px;font-weight:700;color:var(--text);}.section-sub{font-size:11px;color:var(--text3);}
 .table-wrap{overflow-x:auto;}
 table{width:100%;border-collapse:collapse;}
 th{padding:9px 14px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);background:#f8f9ff;font-weight:700;white-space:nowrap;border-bottom:1px solid var(--border);}
 td{padding:9px 14px;border-top:1px solid var(--border);font-size:13px;vertical-align:middle;}
-tr.selected td{background:rgba(67,97,238,.06)!important;}
-tr:hover td{background:rgba(67,97,238,.025);}
+tr.selected td{background:rgba(8,145,178,.06)!important;}
+tr:hover td{background:rgba(8,145,178,.025);}
 .mono{font-family:var(--mono);font-size:12px;color:var(--text2);}
 .tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;}
 .tag-pass{background:#d1fae5;color:#065f46;}.tag-fail{background:#fee2e2;color:#991b1b;}
@@ -51,7 +91,7 @@ tr:hover td{background:rgba(67,97,238,.025);}
 .bar-fill{height:100%;border-radius:3px;transition:width .3s;}
 .bar-pct{font-size:11px;font-variant-numeric:tabular-nums;min-width:34px;text-align:right;font-weight:600;}
 .btn{padding:7px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .15s;}
-.btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(67,97,238,.3);}.btn-primary:hover{background:#3451d1;box-shadow:0 4px 12px rgba(67,97,238,.4);}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(8,145,178,.3);}.btn-primary:hover{background:#3451d1;box-shadow:0 4px 12px rgba(8,145,178,.4);}
 .btn-danger{background:#fee2e2;color:var(--fail);border:1px solid #fecaca;}.btn-danger:hover{background:#fecaca;}
 .btn-ghost{background:#f8f9ff;color:var(--text2);border:1.5px solid var(--border);}.btn-ghost:hover{background:var(--border);color:var(--text);}
 .btn-sm{padding:4px 11px;font-size:12px;}
@@ -59,7 +99,7 @@ tr:hover td{background:rgba(67,97,238,.025);}
 .form-group{display:flex;flex-direction:column;gap:5px;}
 .form-group label{font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
 .fi{background:#fff;border:1.5px solid var(--border);color:var(--text);padding:8px 11px;border-radius:8px;font-size:13px;font-family:var(--font);transition:border-color .15s,box-shadow .15s;width:100%;}
-.fi:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,.12);}
+.fi:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(8,145,178,.12);}
 .fi option{background:#fff;}
 .form-actions{padding:14px 18px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;background:#f8f9ff;}
 .filter-row{display:flex;gap:8px;padding:10px 16px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border);background:#fafbff;}
@@ -74,7 +114,7 @@ tr:hover td{background:rgba(67,97,238,.025);}
 @media(max-width:800px){.two-col{grid-template-columns:1fr}}
 .row-num{color:var(--text3);font-size:11px;}
 .icon-btn{background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:6px;font-size:13px;line-height:1;transition:all .15s;color:var(--text3);}
-.icon-btn:hover{background:rgba(67,97,238,.08);color:var(--accent);}
+.icon-btn:hover{background:rgba(8,145,178,.08);color:var(--accent);}
 .icon-btn.del:hover{background:#fee2e2;color:var(--fail);}
 .chk-cell{width:32px;}
 input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;}
@@ -103,8 +143,8 @@ input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent);cursor:po
 .chart-area{padding:16px;}
 .chart-tabs{display:flex;gap:2px;padding:10px 16px 0;border-bottom:1px solid var(--border);}
 .chart-tab{background:none;border:none;color:var(--text2);padding:7px 16px;cursor:pointer;font-size:12px;font-weight:700;border-bottom:3px solid transparent;border-radius:6px 6px 0 0;}
-.chart-tab.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(67,97,238,.06);}
-.chart-tab:hover:not(.active){background:rgba(67,97,238,.04);}
+.chart-tab.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(8,145,178,.06);}
+.chart-tab:hover:not(.active){background:rgba(8,145,178,.04);}
 .lr-chart{display:flex;align-items:flex-end;gap:4px;height:150px;}
 .lr-bar-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:0;}
 .lr-bar-col .bar-body{border-radius:4px 4px 0 0;width:100%;min-height:2px;}
@@ -112,7 +152,7 @@ input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent);cursor:po
 .lr-bar-col .bar-val{font-size:10px;font-weight:700;}
 .lr-chart-wrap{position:relative;padding:0 0 4px;}
 .import-drop{border:2.5px dashed var(--border);border-radius:12px;padding:32px 16px;text-align:center;color:var(--text3);cursor:pointer;transition:all .2s;background:#fafbff;}
-.import-drop:hover{border-color:var(--accent);background:rgba(67,97,238,.04);color:var(--accent);}
+.import-drop:hover{border-color:var(--accent);background:rgba(8,145,178,.04);color:var(--accent);}
 .help-block{background:#f0f4ff;border:1px solid #c7d2fe;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.7;}
 .help-block b{color:var(--text)}
 .drawing-thumb{width:60px;height:60px;border-radius:8px;object-fit:cover;border:1.5px solid var(--border);cursor:pointer;vertical-align:middle;}
@@ -123,6 +163,23 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
 .gs-scrap{background:#f8f9ff;color:var(--text3);}
 .tag-over{background:#fee2e2;color:var(--fail);animation:blink 1.5s infinite;font-weight:700;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+/* === 靈動 KPI 動畫 === */
+@keyframes kpiIn{from{opacity:0;transform:translateY(16px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);}}
+.kpi{animation:kpiIn .55s cubic-bezier(.22,1,.36,1) both;}
+.kpi-row .kpi:nth-child(1){animation-delay:.03s}
+.kpi-row .kpi:nth-child(2){animation-delay:.09s}
+.kpi-row .kpi:nth-child(3){animation-delay:.15s}
+.kpi-row .kpi:nth-child(4){animation-delay:.21s}
+.kpi-row .kpi:nth-child(5){animation-delay:.27s}
+.kpi-row .kpi:nth-child(6){animation-delay:.33s}
+.kpi::after{content:'';position:absolute;inset:0;border-radius:16px;background:radial-gradient(160px circle at var(--mx,50%) var(--my,50%),rgba(8,145,178,.13),transparent 62%);opacity:0;transition:opacity .3s;pointer-events:none;}
+.kpi:hover::after{opacity:1;}
+.kpi:hover::before{filter:brightness(1.15);}
+.kpi-value{display:inline-block;}
+.kpi:hover .kpi-value{transition:transform .2s;transform:scale(1.06);}
+.spark{width:100%;height:30px;margin-top:9px;display:block;overflow:visible;}
+.spark path[fill="none"]{stroke-dasharray:200;stroke-dashoffset:200;animation:sparkDraw 1s ease .2s forwards;}
+@keyframes sparkDraw{to{stroke-dashoffset:0}}
 .doc-link{display:inline-flex;align-items:center;gap:3px;background:#f0f4ff;border:1px solid #c7d2fe;border-radius:6px;padding:2px 9px;font-size:11px;color:var(--accent);text-decoration:none;cursor:pointer;font-weight:600;}
 .doc-link:hover{background:#e0e7ff;border-color:var(--accent);}
 .tag-npi{background:#cffafe;color:#155e75;}
@@ -142,7 +199,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
 .npi-result-fail{color:var(--fail);font-weight:700;}
 .sqe-d-step{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-size:11px;font-weight:700;background:#f0f4ff;border:1.5px solid var(--border);color:var(--text3);cursor:pointer;transition:all .15s;}
 .sqe-d-step.done{background:#d1fae5;border-color:#6ee7b7;color:#065f46;}
-.sqe-d-step.active{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(67,97,238,.3);}
+.sqe-d-step.active{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(8,145,178,.3);}
 .sev-critical{color:var(--fail);font-weight:700;}.sev-major{color:var(--warn);font-weight:700;}.sev-minor{color:var(--pass);font-weight:700;}
 .timeline-item{display:flex;gap:12px;margin-bottom:10px;}
 .timeline-dot{width:10px;height:10px;border-radius:50%;margin-top:4px;flex-shrink:0;}
@@ -167,10 +224,13 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
 </style>
 </head>
 <body>
+<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div><div class="orb o4"></div><div class="orb o5"></div>
 <div class="app">
 <header>
-  <div class="logo">Brinc <span>IQC</span></div>
-  <div class="badge">v4.5</div>
+  <div class="logo">
+    <div class="logo-mark" id="logoMark" title="點擊可換成貴公司 Logo">SC</div>
+    <div class="logo-text">Solution Consultant Company<span>IQC 品質管理系統</span></div>
+  </div>
   <div class="spacer"></div>
   <div class="global-search-wrap">
     <span class="global-search-icon">🔍</span>
@@ -187,7 +247,8 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
   </div>
   <div id="notifList" style="padding:8px 0"></div>
 </div>
-<nav>
+<div class="layout">
+<aside class="sidebar">
   <button class="active" onclick="showPage('dashboard')">📊 儀表板</button>
   <button onclick="showPage('history')">📋 抽檢記錄</button>
   <button onclick="showPage('eval')">🏆 供應商評鑑</button>
@@ -200,7 +261,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
   <button onclick="showPage('add')">➕ 新增記錄</button>
   <button onclick="showPage('parts')">🔧 料號主檔</button>
   <button onclick="showPage('guide')">📖 說明</button>
-</nav>
+</aside>
 <main>
 
 <!-- ═══ DASHBOARD ═══ -->
@@ -665,7 +726,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
         <input type="checkbox" id="trendShowNpi" checked onchange="renderTrend()" style="accent-color:var(--npi)"> NPI 不符合
       </label>
       <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text2);cursor:pointer;">
-        <input type="checkbox" id="trendShow8d" checked onchange="renderTrend()" style="accent-color:#7c3aed"> 8D
+        <input type="checkbox" id="trendShow8d" checked onchange="renderTrend()" style="accent-color:#6366f1"> 8D
       </label>
     </div>
     <div style="padding:16px;overflow-x:auto;">
@@ -676,7 +737,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
       <span><span style="display:inline-block;width:12px;height:3px;background:var(--fail);vertical-align:middle;margin-right:4px;border-radius:2px"></span>IQC 不合格批</span>
       <span><span style="display:inline-block;width:12px;height:3px;background:var(--warn);vertical-align:middle;margin-right:4px;border-radius:2px"></span>CAR 發出數</span>
       <span><span style="display:inline-block;width:12px;height:3px;background:var(--npi);vertical-align:middle;margin-right:4px;border-radius:2px"></span>NPI 不符合</span>
-      <span><span style="display:inline-block;width:12px;height:3px;background:#7c3aed;vertical-align:middle;margin-right:4px;border-radius:2px"></span>8D 開案數</span>
+      <span><span style="display:inline-block;width:12px;height:3px;background:#6366f1;vertical-align:middle;margin-right:4px;border-radius:2px"></span>8D 開案數</span>
     </div>
   </div>
 
@@ -861,6 +922,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
 
 </main>
 </div>
+</div>
 
 <!-- MODAL: Drawing Viewer -->
 <div class="modal-overlay" id="editModal">
@@ -930,7 +992,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
         <div class="form-group"><label>品名 *</label><input class="fi" id="gs_name"></div>
         <div class="form-group"><label>客戶料號</label><input class="fi" id="gs_custpart"></div>
         <div class="form-group"><label>供應商料號</label><input class="fi" id="gs_suppart"></div>
-        <div class="form-group"><label>供應商名稱</label><input class="fi" id="gs_sup"></div>
+        <div class="form-group"><label>供應商名稱</label><select class="fi" id="gs_sup"><option value="">-- 選擇 --</option></select></div>
         <div class="form-group"><label>Rev 版本</label><input class="fi" id="gs_rev" placeholder="A"></div>
         <div class="form-group"><label>樣品類型</label><select class="fi" id="gs_type"><option>量產樣品</option><option>工程樣品</option><option>首批樣品</option><option>其他</option></select></div>
         <div class="form-group"><label>建立日期 *</label><input class="fi" type="date" id="gs_date"></div>
@@ -1139,8 +1201,8 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
     <div class="modal-body">
       <div class="form-grid" style="padding:0">
         <div class="form-group"><label>CAR 號 *</label><input class="fi" id="car_no" placeholder="CAR-2026-001"></div>
-        <div class="form-group"><label>供應商 *</label><input class="fi" id="car_sup" list="carSupList"><datalist id="carSupList"></datalist></div>
-        <div class="form-group"><label>料號</label><input class="fi" id="car_part"></div>
+        <div class="form-group"><label>供應商 *</label><select class="fi" id="car_sup" onchange="onCarSupChange()"><option value="">-- 選擇 --</option></select></div>
+        <div class="form-group"><label>料號</label><select class="fi" id="car_part"><option value="">-- 先選供應商 --</option></select></div>
         <div class="form-group"><label>問題來源</label>
           <select class="fi" id="car_source"><option>IQC 不合格</option><option>NPI Issue</option><option>客訴</option><option>稽核缺失</option><option>其他</option></select>
         </div>
@@ -1196,8 +1258,8 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
       <div class="form-grid" style="padding:0;margin-bottom:16px;">
         <div class="form-group"><label>案件號 *</label><input class="fi" id="d8_no" placeholder="8D-2026-001"></div>
         <div class="form-group"><label>關聯 CAR</label><select class="fi" id="d8_car"><option value="">無</option></select></div>
-        <div class="form-group"><label>供應商 *</label><input class="fi" id="d8_sup" list="d8SupList"><datalist id="d8SupList"></datalist></div>
-        <div class="form-group"><label>料號</label><input class="fi" id="d8_part"></div>
+        <div class="form-group"><label>供應商 *</label><select class="fi" id="d8_sup" onchange="onD8SupChange()"><option value="">-- 選擇 --</option></select></div>
+        <div class="form-group"><label>料號</label><select class="fi" id="d8_part"><option value="">-- 先選供應商 --</option></select></div>
         <div class="form-group" style="grid-column:span 2"><label>問題主題 *</label><input class="fi" id="d8_title"></div>
         <div class="form-group"><label>D 階段</label>
           <div style="display:flex;gap:5px;flex-wrap:wrap;" id="d8StepsRow"></div>
@@ -1371,7 +1433,7 @@ const lss=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 // 從 Azure SQL 載入所有資料（取代 localStorage 初始化）
 async function apiLoadAll(){
   try{
-    const [h,p,gs,loans,car,d8,aud,perf] = await Promise.all([
+    const [h,p,gs,loans,car,d8,aud,perf,npiRecs,npiIss] = await Promise.all([
       api('GET','/iqc'),
       api('GET','/parts'),
       api('GET','/gs'),
@@ -1380,8 +1442,9 @@ async function apiLoadAll(){
       api('GET','/8d'),
       api('GET','/audit'),
       api('GET','/perf'),
+      api('GET','/npi'),
+      api('GET','/npi-issues'),
     ]);
-    const npiRecs = []; const npiIss = [];
     H = h.map(r=>({id:r.id,date:normDate(r.date||''),sup:r.sup,supCode:r.sup_code||'',part:r.part,pname:r.pname||'',total:r.total,pass:r.pass,fail:r.fail,result:r.result,oqc:r.oqc||'',note:r.note||''}));
     P = p.map(r=>({id:r.id,sup:r.sup,code:r.code||'',part:r.part,craft:r.craft||'',consec:r.consec,rate:r.rate,note:r.note||''}));
     GS = gs.map(r=>({id:r.id,gsId:r.gs_id,name:r.name,custPart:r.cust_part||'',supPart:r.sup_part||'',sup:r.sup||'',rev:r.rev||'',type:r.type||'',date:normDate(r.date||''),approver:r.approver||'',approveDate:normDate(r.approve_date||''),location:r.location||'',expiry:normDate(r.expiry||''),status:r.status||'庫存中',note:r.note||'',drawingUrl:r.drawing_url||'',fai:r.fai_url||'',ppap:r.ppap_url||'',oqcr:r.oqcr_url||'',photos:r.photos||[]}));
@@ -1392,8 +1455,25 @@ async function apiLoadAll(){
     PERF_DATA = perf.map(r=>({id:r.id,sup:r.sup,period:r.period,otd:r.otd||0,qual:r.qual||0,d8:r.d8||0,doc:r.doc||0,score:r.score||0,grade:r.grade||'',note:r.note||''}));
     NPI_DATA = npiRecs.map(r=>({id:r.id,npiId:r.npi_id,project:r.project,sup:r.sup||'',part:r.part||'',pname:r.pname||'',stage:r.stage||'',qty:r.qty||1,date:normDate(r.date||''),sqe:r.sqe||'',result:r.result||'待審核',release:r.release||'待審核',note:r.note||'',measurements:r.measurements?JSON.parse(r.measurements):null}));
     NPI_ISSUES = npiIss.map(r=>({id:r.id,npiId:r.npi_id,desc:r.desc,feat:r.feat||'',sev:r.sev||'Major',owner:r.owner||'',due:normDate(r.due||''),status:r.status||'Open',closeNote:r.close_note||''}));
+    // 載入所有特徵點樣板 → 組成 F
+    try{
+      const featsAll=await api('GET','/feats');
+      F={};
+      featsAll.forEach(r=>{
+        const fk=r.feat_key;
+        if(!F[fk])F[fk]=[];
+        F[fk].push({id:r.id,name:r.feat_name,type:r.feat_type,lsl:r.lsl||'',usl:r.usl||'',unit:r.unit||'',equip:r.equip||''});
+        if(r.drawing&&!F[fk]._drawing)F[fk]._drawing=r.drawing;
+      });
+    }catch(e){console.error('載入特徵點失敗:',e.message);}
+    // 載入所有量測明細 → 組成 M
+    try{
+      const measAll=await api('GET','/measurements');
+      M={};
+      Object.keys(measAll).forEach(k=>{M[k]=measAll[k];});
+    }catch(e){console.error('載入量測失敗:',e.message);}
     toast('☁️ 已從 Azure 載入最新資料');
-    renderDashboard();
+    renderDashboard();renderParts();renderHistory();
   } catch(e){
     console.warn('Azure API unavailable, using localStorage:', e.message);
     toast('📱 離線模式：使用本機資料');
@@ -1584,7 +1664,10 @@ const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>
 // Robust date normalizer: handles 2026/6/1 → 2026-06-01, 2026/06/01 → 2026-06-01, etc.
 function normDate(s){
   if(!s) return '';
-  let str = String(s).trim().replace(/\//g, '-');
+  let str = String(s).trim();
+  // ISO datetime（2026-06-13T00:00:00.000Z）→ 只取日期部分
+  if(str.includes('T')) str = str.split('T')[0];
+  str = str.replace(/\//g, '-');
   // handle YYYY-M-D → YYYY-MM-DD
   const m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   if(m) str = `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
@@ -1714,6 +1797,60 @@ function computeEval(){
 // ═══════════════════════════════════════════════════
 // DASHBOARD — 整合所有模組
 // ═══════════════════════════════════════════════════
+// 過去6個月份
+function last6Months(){
+  const arr=[],now=new Date();
+  for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);arr.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);}
+  return arr;
+}
+// 迷你走勢圖 SVG
+function sparkline(vals,color){
+  if(!vals||vals.length<2)return '';
+  const w=120,hh=30,pad=3;
+  const max=Math.max(...vals,1),min=Math.min(...vals,0),range=(max-min)||1;
+  const pts=vals.map((v,i)=>{
+    const x=pad+(i/(vals.length-1))*(w-2*pad);
+    const y=hh-pad-((v-min)/range)*(hh-2*pad);
+    return [x,y];
+  });
+  const line=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const area=line+` L${pts[pts.length-1][0].toFixed(1)} ${hh} L${pts[0][0].toFixed(1)} ${hh} Z`;
+  const gid='sg'+Math.random().toString(36).slice(2,7);
+  const last=pts[pts.length-1];
+  return `<svg class="spark" viewBox="0 0 ${w} ${hh}" preserveAspectRatio="none"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity=".28"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#${gid})" stroke="none"/><path d="${line}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.6" fill="${color}"/></svg>`;
+}
+// 數字從0滾動到目標值
+function animateCounters(container){
+  if(!container)return;
+  container.querySelectorAll('.kpi-value').forEach(el=>{
+    const raw=el.textContent.trim();
+    const m=raw.match(/^([\d.]+)(.*)$/);
+    if(!m)return;
+    const targetStr=m[1], suffix=m[2];
+    const target=parseFloat(targetStr);
+    const decimals=(targetStr.split('.')[1]||'').length;
+    const dur=750, t0=performance.now();
+    function step(t){
+      const p=Math.min((t-t0)/dur,1);
+      const ease=1-Math.pow(1-p,3);
+      el.textContent=(target*ease).toFixed(decimals)+suffix;
+      if(p<1)requestAnimationFrame(step);
+      else el.textContent=targetStr+suffix;
+    }
+    requestAnimationFrame(step);
+  });
+}
+// 游標光暈跟隨(事件委派,只綁一次)
+if(!window._kpiGlowBound){
+  window._kpiGlowBound=true;
+  document.addEventListener('mousemove',e=>{
+    const k=e.target.closest && e.target.closest('.kpi');
+    if(!k)return;
+    const r=k.getBoundingClientRect();
+    k.style.setProperty('--mx',(e.clientX-r.left)+'px');
+    k.style.setProperty('--my',(e.clientY-r.top)+'px');
+  });
+}
 function renderDashboard(){
   const now=new Date();
   const mth=thisMonth(), yr=String(now.getFullYear());
@@ -1726,11 +1863,17 @@ function renderDashboard(){
   const ev=computeEval();
   const exemptN=ev.filter(r=>r.status==='已達免驗').length;
 
+  // 走勢圖資料(過去6個月)
+  const spkMonths=last6Months();
+  const spkBatch=spkMonths.map(m=>H.filter(r=>r.date.startsWith(m)).length);
+  const spkRate=spkMonths.map(m=>{const mr=H.filter(r=>r.date.startsWith(m));return mr.length?Math.round(mr.filter(x=>x.result==='合格').length/mr.length*100):0;});
+  const spkFail=spkMonths.map(m=>H.filter(r=>r.date.startsWith(m)&&r.result==='不合格').length);
+
   // IQC KPIs
   document.getElementById('kpiRow').innerHTML=`
-    <div class="kpi"><div class="kpi-label">本月抽檢批次</div><div class="kpi-value accent">${mRec.length}</div><div class="kpi-sub">批</div></div>
-    <div class="kpi"><div class="kpi-label">整體合格率</div><div class="kpi-value ${allRate>=.9?'pass':'fail'}">${fmt(allRate)}</div><div class="kpi-sub">累積所有批次</div></div>
-    <div class="kpi"><div class="kpi-label">本月不合格批</div><div class="kpi-value ${mFail>0?'fail':'pass'}">${mFail}</div><div class="kpi-sub">批</div></div>
+    <div class="kpi"><div class="kpi-label">本月抽檢批次</div><div class="kpi-value accent">${mRec.length}</div><div class="kpi-sub">批</div>${sparkline(spkBatch,'#0891b2')}</div>
+    <div class="kpi"><div class="kpi-label">整體合格率</div><div class="kpi-value ${allRate>=.9?'pass':'fail'}">${fmt(allRate)}</div><div class="kpi-sub">累積所有批次</div>${sparkline(spkRate,'#059669')}</div>
+    <div class="kpi"><div class="kpi-label">本月不合格批</div><div class="kpi-value ${mFail>0?'fail':'pass'}">${mFail}</div><div class="kpi-sub">批</div>${sparkline(spkFail,'#dc2626')}</div>
     <div class="kpi"><div class="kpi-label">本年度批次</div><div class="kpi-value accent">${yRec.length}</div><div class="kpi-sub">批</div></div>
     <div class="kpi"><div class="kpi-label">已達免驗料號</div><div class="kpi-value accent">${exemptN}</div><div class="kpi-sub">料號</div></div>
   `;
@@ -1750,6 +1893,10 @@ function renderDashboard(){
     <div class="kpi" style="cursor:pointer" onclick="showPage('sqe')"><div class="kpi-label">進行中 8D</div><div class="kpi-value ${openD8>0?'warn':'pass'}">${openD8}</div><div class="kpi-sub">案件</div></div>
     <div class="kpi" style="cursor:pointer" onclick="showPage('gs')"><div class="kpi-label">GS 借出中</div><div class="kpi-value ${gsOverdue>0?'fail':gsOut>0?'warn':'pass'}">${gsOut}</div><div class="kpi-sub">${gsOverdue>0?`逾期 ${gsOverdue} 件`:'無逾期'}</div></div>
   `;
+
+  // 靈動:數字滾動 + 游標光暈
+  animateCounters(document.getElementById('kpiRow'));
+  animateCounters(document.getElementById('kpiRow2'));
 
   // 待處理事項
   const alerts=[];
@@ -2126,7 +2273,7 @@ function measRemFeat(cid,si,fi){
 async function saveMeas(){
   M[measId]=JSON.parse(JSON.stringify(measState));
   try{await api('POST','/measurements',{iqcId:measId,samples:measState.samples});}catch(e){toast('儲存失敗：'+e.message,true);return;}
-  closeModal('measModal');renderHistory();toast('☁️ 量測資料已儲存');
+  closeModal('measModal');renderHistory();initAnalysisSups();toast('☁️ 量測資料已儲存');
 }
 
 // ═══════════════════════════════════════════════════
@@ -2145,6 +2292,17 @@ function onSupChange(){
   addFeatState={samples:[]};
   document.getElementById('addFeatArea').style.display='none';
 }
+function fillSupSelect(selId,val){
+  const el=document.getElementById(selId);if(!el)return;
+  el.innerHTML='<option value="">-- 選擇 --</option>'+sqeAllSups().map(s=>`<option ${s===val?'selected':''}>${s}</option>`).join('');
+}
+function fillPartSelect(selId,sup,val){
+  const el=document.getElementById(selId);if(!el)return;
+  const ps=P.filter(p=>p.sup===sup);
+  el.innerHTML='<option value="">-- 選擇料號 --</option>'+ps.map(p=>`<option ${p.part===(val||'')?'selected':''} value="${p.part}">${p.part}${p.craft?' ('+p.craft+')':''}</option>`).join('');
+}
+function onD8SupChange(){fillPartSelect('d8_part',document.getElementById('d8_sup').value);}
+function onCarSupChange(){fillPartSelect('car_part',document.getElementById('car_sup').value);}
 function onPartChange(){
   const sup=document.getElementById('f_sup').value,part=document.getElementById('f_part').value;
   const found=P.find(p=>p.sup===sup&&p.part===part);
@@ -2460,14 +2618,14 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelect
 // ═══════════════════════════════════════════════════
 function showPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.sidebar button').forEach(b=>b.classList.remove('active'));
   if(name==='gs'){
     const pg=document.getElementById('page-gs');
     if(pg&&!pg.innerHTML.trim())pg.innerHTML=gsPageHTML();
   }
   document.getElementById('page-'+name).classList.add('active');
   const idx=['dashboard','history','eval','npi','sqe','trend','health','gs','import','add','parts','guide'].indexOf(name);
-  document.querySelectorAll('nav button')[idx]?.classList.add('active');
+  document.querySelectorAll('.sidebar button')[idx]?.classList.add('active');
   if(name==='dashboard')renderDashboard();
   else if(name==='history'){refreshSups();renderHistory();initAnalysisSups();}
   else if(name==='add'){populateSupSel();if(!document.getElementById('f_date').value)document.getElementById('f_date').value=new Date().toISOString().slice(0,10);}
@@ -2656,7 +2814,7 @@ function editNpi(id){
   openModal('npiModal');
 }
 function editNpiFromDetail(){closeModal('npiDetailModal');editNpi(npiDetailId);}
-function saveNpi(){
+async function saveNpi(){
   const npiId=document.getElementById('npi_id').value.trim();
   const project=document.getElementById('npi_project').value.trim();
   const sup=document.getElementById('npi_sup').value;
@@ -2674,24 +2832,27 @@ function saveNpi(){
     note:document.getElementById('npi_note').value,
     measurements:npiFeatState.samples.length?JSON.parse(JSON.stringify(npiFeatState)):null,
   };
-  if(npiEditId){
-    const idx=NPI_DATA.findIndex(x=>x.id===npiEditId);
-    if(idx>=0)NPI_DATA[idx]={...NPI_DATA[idx],...rec};
-    toast('已更新');
-  } else {
-    NPI_DATA.push({id:nid(NPI_DATA),...rec});
-    toast('NPI 記錄已儲存');
-  }
-  lss(NPI_SK,NPI_DATA);
+  try{
+    if(npiEditId){
+      await api('PUT','/npi/'+npiEditId,rec);
+      const idx=NPI_DATA.findIndex(x=>x.id===npiEditId);
+      if(idx>=0)NPI_DATA[idx]={...NPI_DATA[idx],...rec};
+      toast('☁️ 已更新');
+    } else {
+      const resp=await api('POST','/npi',rec);
+      NPI_DATA.push({id:resp.id,...rec});
+      toast('☁️ NPI 記錄已儲存');
+    }
+  }catch(e){toast('儲存失敗：'+e.message,true);return;}
   closeModal('npiModal');
   populateNpiSups();renderNpiKpis();renderNpiList();
 }
-function delNpi(id){
+async function delNpi(id){
   if(!confirm('確定要刪除？'))return;
+  try{await api('DELETE','/npi/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}
   NPI_DATA=NPI_DATA.filter(n=>n.id!==id);
   NPI_ISSUES=NPI_ISSUES.filter(i=>i.npiId!==id);
-  lss(NPI_SK,NPI_DATA);lss(NPI_ISSUE_SK,NPI_ISSUES);
-  renderNpiKpis();renderNpiList();toast('已刪除');
+  renderNpiKpis();renderNpiList();toast('☁️ 已刪除');
 }
 
 // Detail
@@ -2772,20 +2933,17 @@ function openNpiIssueModal(npiId){
   document.getElementById('iss_due').value='';
   openModal('npiIssueModal');
 }
-function saveNpiIssue(){
+async function saveNpiIssue(){
   const desc=document.getElementById('iss_desc').value.trim();
   const owner=document.getElementById('iss_owner').value.trim();
   const due=document.getElementById('iss_due').value;
   if(!desc||!owner||!due){toast('請填寫問題描述、負責人、改善期限',true);return;}
   const sev=document.getElementById('iss_sev').value;
-  NPI_ISSUES.push({
-    id:nid(NPI_ISSUES),npiId:npiIssueTargetId,
-    desc,feat:document.getElementById('iss_feat').value,
-    sev,owner,due,
-    status:document.getElementById('iss_status').value,
-    closeNote:document.getElementById('iss_close_note').value,
-  });
-  lss(NPI_ISSUE_SK,NPI_ISSUES);
+  const issRec={npiId:npiIssueTargetId,desc,feat:document.getElementById('iss_feat').value,sev,owner,due,status:document.getElementById('iss_status').value,closeNote:document.getElementById('iss_close_note').value};
+  try{
+    const resp=await api('POST','/npi-issues',issRec);
+    NPI_ISSUES.push({id:resp.id,...issRec});
+  }catch(e){toast('儲存失敗：'+e.message,true);return;}
   closeModal('npiIssueModal');
   renderNpiKpis();renderNpiList();
   if(npiDetailId===npiIssueTargetId) openNpiDetail(npiDetailId);
@@ -2800,22 +2958,22 @@ function saveNpiIssue(){
     },300);
   }
 }
-function toggleIssueStatus(id){
+async function toggleIssueStatus(id){
   const iss=NPI_ISSUES.find(x=>x.id===id);if(!iss)return;
   const seq=['Open','In Progress','Closed'];
   iss.status=seq[(seq.indexOf(iss.status)+1)%3];
-  lss(NPI_ISSUE_SK,NPI_ISSUES);
+  try{await api('PUT','/npi-issues/'+id,iss);}catch(e){toast('更新失敗：'+e.message,true);return;}
   renderNpiKpis();renderNpiList();
   if(npiDetailId)openNpiDetail(npiDetailId);
-  toast(`Issue 狀態 → ${iss.status}`);
+  toast(`☁️ Issue 狀態 → ${iss.status}`);
 }
-function delIssue(id){
+async function delIssue(id){
   if(!confirm('確定刪除此 Issue？'))return;
+  try{await api('DELETE','/npi-issues/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}
   NPI_ISSUES=NPI_ISSUES.filter(x=>x.id!==id);
-  lss(NPI_ISSUE_SK,NPI_ISSUES);
   renderNpiKpis();renderNpiList();
   if(npiDetailId)openNpiDetail(npiDetailId);
-  toast('Issue 已刪除');
+  toast('☁️ Issue 已刪除');
 }
 
 // ═══════════════════════════════════════════════════
@@ -2969,7 +3127,8 @@ function editGsFromDetail(){closeModal('gsDetailModal');editGs(gsEditId);}
 function openGsAddModal(){
   gsEditId=null;gsPhotoData=[];
   document.getElementById('gsModalTitle').textContent='➕ 新增 Golden Sample';
-  ['gs_id','gs_name','gs_custpart','gs_suppart','gs_sup','gs_rev','gs_approver','gs_location','gs_note','gs_drawingUrl','gs_fai','gs_ppap','gs_oqcr'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['gs_id','gs_name','gs_custpart','gs_suppart','gs_rev','gs_approver','gs_location','gs_note','gs_drawingUrl','gs_fai','gs_ppap','gs_oqcr'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  fillSupSelect('gs_sup','');
   document.getElementById('gs_type').value='量產樣品';
   document.getElementById('gs_date').value=todayStr();
   document.getElementById('gs_approveDate').value='';
@@ -2981,6 +3140,7 @@ function editGs(id){
   const g=GS.find(x=>x.id===id);if(!g)return;
   gsEditId=id;
   document.getElementById('gsModalTitle').textContent='✏️ 編輯 Golden Sample';
+  fillSupSelect('gs_sup',g.sup);
   const map={gs_id:'gsId',gs_name:'name',gs_custpart:'custPart',gs_suppart:'supPart',gs_sup:'sup',gs_rev:'rev',gs_date:'date',gs_approver:'approver',gs_approveDate:'approveDate',gs_location:'location',gs_expiry:'expiry',gs_note:'note',gs_drawingUrl:'drawingUrl',gs_fai:'fai',gs_ppap:'ppap',gs_oqcr:'oqcr'};
   Object.entries(map).forEach(([elId,field])=>{const el=document.getElementById(elId);if(el)el.value=g[field]||'';});
   document.getElementById('gs_type').value=g.type||'量產樣品';
@@ -3283,7 +3443,9 @@ function carGo(p){carPage=p;renderCar();}
 function openCarModal(prefill){
   carEditId=null;
   document.getElementById('carModalTitle').textContent='📨 發出 CAR';
-  ['car_no','car_sup','car_part','car_desc','car_reply','car_verify'].forEach(id=>document.getElementById(id).value='');
+  ['car_no','car_desc','car_reply','car_verify'].forEach(id=>document.getElementById(id).value='');
+  fillSupSelect('car_sup',prefill&&prefill.sup?prefill.sup:'');
+  fillPartSelect('car_part',prefill&&prefill.sup?prefill.sup:'',prefill&&prefill.part?prefill.part:'');
   document.getElementById('car_source').value='IQC 不合格';
   document.getElementById('car_sev').value='Major';
   document.getElementById('car_status').value='未回覆';
@@ -3302,8 +3464,9 @@ function editCar(id){
   const c=CAR_DATA.find(x=>x.id===id);if(!c)return;
   carEditId=id;
   document.getElementById('carModalTitle').textContent='✏️ 編輯 CAR';
-  document.getElementById('car_no').value=c.no;document.getElementById('car_sup').value=c.sup;
-  document.getElementById('car_part').value=c.part||'';document.getElementById('car_source').value=c.source||'IQC 不合格';
+  document.getElementById('car_no').value=c.no;
+  fillSupSelect('car_sup',c.sup);fillPartSelect('car_part',c.sup,c.part||'');
+  document.getElementById('car_source').value=c.source||'IQC 不合格';
   document.getElementById('car_desc').value=c.desc;document.getElementById('car_sev').value=c.sev;
   document.getElementById('car_out').value=c.out;document.getElementById('car_due').value=c.due;
   document.getElementById('car_status').value=c.status;
@@ -3377,7 +3540,8 @@ function setD8Step(n){
 function open8DModal(){
   d8EditId=null;d8CurrentStep=1;
   document.getElementById('d8ModalTitle').textContent='🔧 新增 8D';
-  ['d8_no','d8_sup','d8_part','d8_title'].forEach(id=>document.getElementById(id).value='');
+  ['d8_no','d8_title'].forEach(id=>document.getElementById(id).value='');
+  fillSupSelect('d8_sup','');fillPartSelect('d8_part','','');
   document.getElementById('d8_status').value='進行中';
   document.getElementById('d8_open').value=todayStr();
   document.getElementById('d8_target').value='';
@@ -3393,8 +3557,7 @@ function openD8FromCar(carId){
   setTimeout(()=>{
     const n=CAR_DATA.length;
     document.getElementById('d8_no').value=`8D-${new Date().getFullYear()}-${String(n+1).padStart(3,'0')}`;
-    document.getElementById('d8_sup').value=c.sup;
-    document.getElementById('d8_part').value=c.part||'';
+    fillSupSelect('d8_sup',c.sup);fillPartSelect('d8_part',c.sup,c.part||'');
     document.getElementById('d8_title').value=c.desc.slice(0,60);
     document.getElementById('d8_car').value=carId;
   },50);
@@ -3403,8 +3566,9 @@ function editD8(id){
   const d=D8_DATA.find(x=>x.id===id);if(!d)return;
   d8EditId=id;d8CurrentStep=d.step||1;
   document.getElementById('d8ModalTitle').textContent='✏️ 編輯 8D';
-  document.getElementById('d8_no').value=d.no;document.getElementById('d8_sup').value=d.sup;
-  document.getElementById('d8_part').value=d.part||'';document.getElementById('d8_title').value=d.title;
+  document.getElementById('d8_no').value=d.no;
+  fillSupSelect('d8_sup',d.sup);fillPartSelect('d8_part',d.sup,d.part||'');
+  document.getElementById('d8_title').value=d.title;
   document.getElementById('d8_status').value=d.status;
   document.getElementById('d8_open').value=d.open||'';document.getElementById('d8_target').value=d.target||'';
   const carSel=document.getElementById('d8_car');
@@ -4161,7 +4325,7 @@ function runAnalysis(){
       if(f.usl!==null){ctx.strokeStyle='#6ee7b7';ctx.lineWidth=1;ctx.setLineDash([2,2]);ctx.beginPath();ctx.moveTo(pad,scaleY(f.usl));ctx.lineTo(W-pad,scaleY(f.usl));ctx.stroke();}
       ctx.setLineDash([]);
       // Line
-      ctx.strokeStyle='#4361ee';ctx.lineWidth=2;ctx.lineJoin='round';
+      ctx.strokeStyle='#0891b2';ctx.lineWidth=2;ctx.lineJoin='round';
       ctx.beginPath();
       batchAvgs.forEach((v,i)=>{i===0?ctx.moveTo(scaleX(i),scaleY(v)):ctx.lineTo(scaleX(i),scaleY(v));});
       ctx.stroke();
@@ -4169,7 +4333,7 @@ function runAnalysis(){
       batchAvgs.forEach((v,i)=>{
         const oos=f.lsl!==null&&v<f.lsl||f.usl!==null&&v>f.usl;
         ctx.beginPath();ctx.arc(scaleX(i),scaleY(v),3,0,Math.PI*2);
-        ctx.fillStyle=oos?'#dc2626':'#4361ee';ctx.fill();
+        ctx.fillStyle=oos?'#dc2626':'#0891b2';ctx.fill();
       });
     },60);
   });
@@ -4351,7 +4515,7 @@ function renderTrendChart(){
   if(showIqc) drawLine(iqcVals,'#dc2626');
   if(showCar)  drawLine(carVals,'#d97706');
   if(showNpi)  drawLine(npiVals,'#0891b2');
-  if(show8d)   drawLine(d8Vals,'#7c3aed');
+  if(show8d)   drawLine(d8Vals,'#6366f1');
 
   // Axis border
   ctx.strokeStyle=gridColor;ctx.lineWidth=1;
