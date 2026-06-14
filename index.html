@@ -139,7 +139,7 @@ input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent);cursor:po
 #toast{position:fixed;bottom:24px;right:24px;background:var(--pass);color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;opacity:0;transform:translateY(10px);transition:all .2s;pointer-events:none;z-index:9999;box-shadow:0 4px 20px rgba(5,150,105,.3);}
 #toast.show{opacity:1;transform:translateY(0)}
 #toast.error{background:var(--fail);box-shadow:0 4px 20px rgba(220,38,38,.3);}
-.modal-overlay{position:fixed;inset:0;background:rgba(30,42,74,.5);z-index:500;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(2px);}
+.modal-overlay{position:fixed;inset:0;background:rgba(30,42,74,.5);z-index:500;display:none;align-items:center;justify-content:center;padding:14px;}
 .modal-overlay.open{display:flex;}
 .modal{background:#fff;border:none;border-radius:16px;width:100%;max-height:92vh;overflow-y:auto;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(30,42,74,.2);}
 .modal.sm{max-width:480px}.modal.md{max-width:760px}.modal.lg{max-width:1060px}.modal.xl{max-width:1140px}
@@ -1460,6 +1460,13 @@ function hideBootSkeleton(){
   const el=document.getElementById('bootSkeleton');
   if(el){el.classList.add('hide');setTimeout(()=>el.remove(),500);}
 }
+async function apiRetry(method,path,tries){
+  tries=tries||3;
+  for(let i=0;i<tries;i++){
+    try{return await api(method,path);}
+    catch(e){if(i===tries-1)throw e;await new Promise(r=>setTimeout(r,400));}
+  }
+}
 async function apiLoadAll(){
   try{
     const [h,p,gs,loans,car,d8,aud,perf,npiRecs,npiIss,featsAll,measAll] = await Promise.all([
@@ -1473,8 +1480,8 @@ async function apiLoadAll(){
       api('GET','/perf'),
       api('GET','/npi'),
       api('GET','/npi-issues'),
-      api('GET','/feats').catch(()=>[]),
-      api('GET','/measurements').catch(()=>({})),
+      apiRetry('GET','/feats').catch(()=>null),
+      apiRetry('GET','/measurements').catch(()=>null),
     ]);
     H = h.map(r=>({id:r.id,date:normDate(r.date||''),sup:r.sup,supCode:r.sup_code||'',part:r.part,pname:r.pname||'',total:r.total,pass:r.pass,fail:r.fail,result:r.result,oqc:r.oqc||'',note:r.note||''}));
     P = p.map(r=>({id:r.id,sup:r.sup,code:r.code||'',part:r.part,craft:r.craft||'',consec:r.consec,rate:r.rate,note:r.note||''}));
@@ -1486,17 +1493,19 @@ async function apiLoadAll(){
     PERF_DATA = perf.map(r=>({id:r.id,sup:r.sup,period:r.period,otd:r.otd||0,qual:r.qual||0,d8:r.d8||0,doc:r.doc||0,score:r.score||0,grade:r.grade||'',note:r.note||''}));
     NPI_DATA = npiRecs.map(r=>({id:r.id,npiId:r.npi_id,project:r.project,sup:r.sup||'',part:r.part||'',pname:r.pname||'',stage:r.stage||'',qty:r.qty||1,date:normDate(r.date||''),sqe:r.sqe||'',result:r.result||'待審核',release:r.release||'待審核',note:r.note||'',measurements:r.measurements?JSON.parse(r.measurements):null}));
     NPI_ISSUES = npiIss.map(r=>({id:r.id,npiId:r.npi_id,desc:r.desc,feat:r.feat||'',sev:r.sev||'Major',owner:r.owner||'',due:normDate(r.due||''),status:r.status||'Open',closeNote:r.close_note||''}));
-    // 組合特徵點樣板 → F(用並行已抓回的資料)
-    F={};
-    (featsAll||[]).forEach(r=>{
-      const fk=r.feat_key;
-      if(!F[fk])F[fk]=[];
-      F[fk].push({id:r.id,name:r.feat_name,type:r.feat_type,lsl:r.lsl||'',usl:r.usl||'',unit:r.unit||'',equip:r.equip||''});
-      if(r.drawing&&!F[fk]._drawing)F[fk]._drawing=r.drawing;
-    });
-    // 組合量測明細 → M(用並行已抓回的資料)
-    M={};
-    Object.keys(measAll||{}).forEach(k=>{M[k]=measAll[k];});
+    if(featsAll){
+      F={};
+      featsAll.forEach(r=>{
+        const fk=r.feat_key;
+        if(!F[fk])F[fk]=[];
+        F[fk].push({id:r.id,name:r.feat_name,type:r.feat_type,lsl:r.lsl||'',usl:r.usl||'',unit:r.unit||'',equip:r.equip||''});
+        if(r.drawing&&!F[fk]._drawing)F[fk]._drawing=r.drawing;
+      });
+    }
+    if(measAll){
+      M={};
+      Object.keys(measAll).forEach(k=>{M[k]=measAll[k];});
+    }
     toast('☁️ 已從 Azure 載入最新資料');
     renderDashboard();renderParts();renderHistory();
     hideBootSkeleton();
@@ -1914,10 +1923,10 @@ function renderDashboard(){
   // 整體狀況 KPIs
   const openNpiIssues=NPI_ISSUES.filter(i=>i.status!=='Closed').length;
   const openCar=CAR_DATA.filter(c=>c.status!=='已關閉').length;
-  const overdueCar=CAR_DATA.filter(c=>c.status!=='已關閉'&&c.due<today).length;
+  const overdueCar=CAR_DATA.filter(c=>c.status!=='已關閉'&&c.due&&c.due<today).length;
   const openD8=D8_DATA.filter(d=>d.status!=='已關閉').length;
   const gsOut=GS.filter(g=>g.status==='借出中').length;
-  const gsOverdue=LOAN.filter(l=>l.status==='借出中'&&l.dueDate<today).length;
+  const gsOverdue=LOAN.filter(l=>l.status==='借出中'&&l.dueDate&&l.dueDate<today).length;
   const npiPending=NPI_DATA.filter(n=>n.release==='待審核').length;
   document.getElementById('kpiRow2').innerHTML=`
     <div class="kpi" style="cursor:pointer" onclick="showPage('npi')"><div class="kpi-label">NPI 待放行</div><div class="kpi-value ${npiPending>0?'warn':'pass'}">${npiPending}</div><div class="kpi-sub">待審核樣品</div></div>
@@ -2077,9 +2086,10 @@ async function batchDelete(){
 }
 async function delOne(id){
   if(!confirm('確定要刪除這筆記錄？'))return;
-  try{await api('DELETE','/iqc/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}
+  const bk=H.find(r=>r.id===id),mbk=M[id];
   H=H.filter(r=>r.id!==id);delete M[id];selectedIds.delete(id);
-  renderHistory();renderDashboard();renderEval();toast('☁️ 已刪除');
+  renderHistory();renderDashboard();renderEval();updateNotifBadge();toast('☁️ 已刪除');
+  api('DELETE','/iqc/'+id).catch(e=>{if(bk)H.push(bk);if(mbk)M[id]=mbk;renderHistory();renderDashboard();renderEval();toast('刪除失敗，已還原',true);});
 }
 
 // ═══════════════════════════════════════════════════
@@ -2460,18 +2470,13 @@ async function addPart(){
     document.getElementById('p_consec').value='10';document.getElementById('p_rate').value='0.95';
   }catch(e){console.error('儲存失敗:',e.message);toast('儲存失敗：'+e.message,true);}
 }
-async function delPart(id){if(!confirm('確定要刪除？'))return;try{await api('DELETE','/parts/'+id);P=P.filter(p=>p.id!==id);renderParts();toast('☁️ 已從雲端刪除');}catch(e){toast('刪除失敗：'+e.message,true);}}
+async function delPart(id){if(!confirm('確定要刪除？'))return;const bk=P.find(p=>p.id===id);P=P.filter(p=>p.id!==id);renderParts();toast('☁️ 已刪除');api('DELETE','/parts/'+id).catch(e=>{if(bk)P.push(bk);renderParts();toast('刪除失敗，已還原',true);});}
 
 // Feature template modal
-async function openFeatModal(sup,part){
+function openFeatModal(sup,part){
   featKey=sup+'||'+part;
   document.getElementById('featSub').textContent=`${sup} / ${part}`;
-  try{
-    const rows=await api('GET','/feats?key='+encodeURIComponent(featKey));
-    const arr=rows.map(r=>({id:r.id,name:r.feat_name,type:r.feat_type,lsl:r.lsl||'',usl:r.usl||'',unit:r.unit||'',equip:r.equip||''}));
-    if(rows[0]&&rows[0].drawing)arr._drawing=rows[0].drawing;
-    F[featKey]=arr;
-  }catch(e){console.error('載入特徵點失敗:',e.message);}
+  if(!Array.isArray(F[featKey]))F[featKey]=[];
   renderFeatModal();renderParts();openModal('featModal');
 }
 // 特徵點整批同步到雲端
@@ -2483,10 +2488,11 @@ function saveFeatsToCloud(fk){
 // 明確儲存特徵點(確保最後編輯也存到)+ 關閉
 async function saveFeatsAndClose(){
   if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
-  const arr=Array.isArray(F[featKey])?F[featKey]:[];
-  const drawing=(F[featKey]&&F[featKey]._drawing)||'';
+  const fk=featKey;
+  const arr=Array.isArray(F[fk])?F[fk]:[];
+  const drawing=(F[fk]&&F[fk]._drawing)||'';
   try{
-    await api('POST','/feats',{key:featKey,feats:arr,drawing});
+    await api('POST','/feats',{key:fk,feats:arr,drawing});
     toast('☁️ 特徵點已儲存');
   }catch(e){toast('儲存失敗：'+e.message,true);return;}
   renderParts();closeModal('featModal');
@@ -2494,9 +2500,11 @@ async function saveFeatsAndClose(){
 // 關閉前也確保儲存(避免最後一格未失焦遺漏)
 async function closeFeatModal(){
   if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
-  const arr=Array.isArray(F[featKey])?F[featKey]:[];
-  const drawing=(F[featKey]&&F[featKey]._drawing)||'';
-  try{await api('POST','/feats',{key:featKey,feats:arr,drawing});}catch(e){}
+  const fk=featKey;
+  const arr=Array.isArray(F[fk])?F[fk]:[];
+  const drawing=(F[fk]&&F[fk]._drawing)||'';
+  try{await api('POST','/feats',{key:fk,feats:arr,drawing});}
+  catch(e){toast('特徵點儲存失敗，請再按一次儲存：'+e.message,true);return;}
   renderParts();closeModal('featModal');
 }
 // Field schema per measurement type
@@ -2906,7 +2914,8 @@ async function saveNpi(){
 }
 async function delNpi(id){
   if(!confirm('確定要刪除？'))return;
-  try{await api('DELETE','/npi/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}
+  const bk=NPI_DATA.find(n=>n.id===id),ibk=NPI_ISSUES.filter(i=>i.npiId===id);
+  api('DELETE','/npi/'+id).catch(e=>{if(bk)NPI_DATA.push(bk);NPI_ISSUES.push(...ibk);renderNpiKpis();renderNpiList();toast('刪除失敗，已還原',true);});
   NPI_DATA=NPI_DATA.filter(n=>n.id!==id);
   NPI_ISSUES=NPI_ISSUES.filter(i=>i.npiId!==id);
   renderNpiKpis();renderNpiList();toast('☁️ 已刪除');
@@ -3026,7 +3035,8 @@ async function toggleIssueStatus(id){
 }
 async function delIssue(id){
   if(!confirm('確定刪除此 Issue？'))return;
-  try{await api('DELETE','/npi-issues/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}
+  const bk=NPI_ISSUES.find(x=>x.id===id);
+  api('DELETE','/npi-issues/'+id).catch(e=>{if(bk)NPI_ISSUES.push(bk);renderNpiKpis();renderNpiList();toast('刪除失敗，已還原',true);});
   NPI_ISSUES=NPI_ISSUES.filter(x=>x.id!==id);
   renderNpiKpis();renderNpiList();
   if(npiDetailId)openNpiDetail(npiDetailId);
@@ -3081,7 +3091,7 @@ function gsPageHTML(){
 function renderGsDashboard(){
   const today=todayStr();
   const outN=GS.filter(g=>g.status==='借出中').length;
-  const overdueLoans=LOAN.filter(l=>l.status==='借出中'&&l.dueDate<today);
+  const overdueLoans=LOAN.filter(l=>l.status==='借出中'&&l.dueDate&&l.dueDate<today);
   const expirySoon=GS.filter(g=>g.expiry&&dateDiff(today,g.expiry)>=0&&dateDiff(today,g.expiry)<=30).length;
   const kr=document.getElementById('gsKpiRow');
   if(kr)kr.innerHTML=`
@@ -3236,8 +3246,9 @@ async function saveGs(){
 }
 async function delGs(id){
   if(!confirm('確定要刪除？'))return;
-  try{await api('DELETE','/gs/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}
-  GS=GS.filter(g=>g.id!==id);renderGsDashboard();renderGsList();toast('☁️ 已刪除');
+  const bk=GS.find(g=>g.id===id);
+  GS=GS.filter(g=>g.id!==id);renderGsDashboard();renderGsList();updateNotifBadge();toast('☁️ 已刪除');
+  api('DELETE','/gs/'+id).catch(e=>{if(bk)GS.push(bk);renderGsDashboard();renderGsList();toast('刪除失敗，已還原',true);});
 }
 
 // LOAN
@@ -3256,7 +3267,7 @@ function renderLoanList(){
   const tbody=document.getElementById('loanTbody');if(!tbody)return;
   if(!pd.length){tbody.innerHTML=`<tr><td colspan="11" class="empty"><div class="empty-icon">📤</div><div class="empty-msg">無借還紀錄</div></td></tr>`;return;}
   tbody.innerHTML=pd.map((l,i)=>{
-    const overdue=l.status==='借出中'&&l.dueDate<today;
+    const overdue=l.status==='借出中'&&l.dueDate&&l.dueDate<today;
     const stHtml=l.status==='已歸還'?'<span class="tag tag-pass">已歸還</span>':overdue?'<span class="tag tag-over">逾期</span>':'<span class="tag tag-fail">借出中</span>';
     return`<tr>
       <td class="row-num">${start+i+1}</td>
@@ -3299,7 +3310,7 @@ async function saveLoan(){
     LOAN.push({id:resp.id,...rec});
     if(g){g.status='借出中';await api('PUT','/gs/'+g.id,g);}
   }catch(e){toast('儲存失敗：'+e.message,true);return;}
-  closeModal('loanModal');renderGsDashboard();renderGsList();renderLoanList();toast('☁️ 已記錄借出');
+  closeModal('loanModal');renderGsDashboard();renderGsList();renderLoanList();toast('☁️ 已記錄借出');updateNotifBadge();
 }
 function openReturnModal(id){
   const l=LOAN.find(x=>x.id===id);if(!l)return;
@@ -3321,12 +3332,13 @@ async function saveReturn(){
     await api('PUT','/loans/'+l.id,l);
     if(g&&!stillOut)await api('PUT','/gs/'+g.id,g);
   }catch(e){toast('儲存失敗：'+e.message,true);return;}
-  closeModal('returnModal');renderGsDashboard();renderGsList();renderLoanList();toast('☁️ 歸還完成');
+  closeModal('returnModal');renderGsDashboard();renderGsList();renderLoanList();toast('☁️ 歸還完成');updateNotifBadge();
 }
 async function delLoan(id){
   if(!confirm('確定刪除？'))return;
-  try{await api('DELETE','/loans/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}
-  LOAN=LOAN.filter(l=>l.id!==id);renderLoanList();renderGsDashboard();toast('☁️ 已刪除');
+  const bk=LOAN.find(l=>l.id===id);
+  LOAN=LOAN.filter(l=>l.id!==id);renderLoanList();renderGsDashboard();updateNotifBadge();toast('☁️ 已刪除');
+  api('DELETE','/loans/'+id).catch(e=>{if(bk)LOAN.push(bk);renderLoanList();renderGsDashboard();updateNotifBadge();toast('刪除失敗，已還原',true);});
 }
 
 // ═══════════════════════════════════════════════════
@@ -3405,7 +3417,7 @@ function renderSqe(){
   const openCar=CAR_DATA.filter(c=>c.status!=='已關閉').length;
   const openD8=D8_DATA.filter(d=>d.status!=='已關閉').length;
   const today=todayStr();
-  const overdueCar=CAR_DATA.filter(c=>c.status!=='已關閉'&&c.due<today).length;
+  const overdueCar=CAR_DATA.filter(c=>c.status!=='已關閉'&&c.due&&c.due<today).length;
   document.getElementById('sqeKpiRow').innerHTML=`
     <div class="kpi"><div class="kpi-label">開放 CAR</div><div class="kpi-value ${openCar>0?'fail':'pass'}">${openCar}</div></div>
     <div class="kpi"><div class="kpi-label">逾期 CAR</div><div class="kpi-value ${overdueCar>0?'fail':'pass'}">${overdueCar}</div></div>
@@ -3474,7 +3486,7 @@ function renderCar(){
   const tbody=document.getElementById('carTbody');if(!tbody)return;
   if(!pd.length){tbody.innerHTML=`<tr><td colspan="11" class="empty"><div class="empty-icon">📨</div><div class="empty-msg">無 CAR 記錄</div></td></tr>`;return;}
   tbody.innerHTML=pd.map((c,i)=>{
-    const overdue=c.status!=='已關閉'&&c.due<today;
+    const overdue=c.status!=='已關閉'&&c.due&&c.due<today;
     return`<tr>
       <td class="row-num">${start+i+1}</td>
       <td class="mono" style="font-weight:600;color:var(--accent)">${c.no}</td>
@@ -3560,7 +3572,7 @@ async function saveCar(){
     }
   }
 }
-async function delCar(id){if(!confirm('確定刪除？'))return;try{await api('DELETE','/car/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}CAR_DATA=CAR_DATA.filter(c=>c.id!==id);renderCar();renderSqe();toast('☁️ 已刪除');}
+async function delCar(id){if(!confirm('確定刪除？'))return;const bk=CAR_DATA.find(c=>c.id===id);CAR_DATA=CAR_DATA.filter(c=>c.id!==id);renderCar();renderSqe();updateNotifBadge();toast('☁️ 已刪除');api('DELETE','/car/'+id).catch(e=>{if(bk)CAR_DATA.push(bk);renderCar();renderSqe();toast('刪除失敗，已還原',true);});}
 
 // IQC 不合格 → 開 CAR
 function openCarFromIqc(recId){
@@ -3702,7 +3714,7 @@ function render8D(){
   document.getElementById('d8Pag').innerHTML=pg+`<span class="pg-info">${start+1}–${Math.min(start+PAGE,data.length)} / ${data.length}</span>`;
 }
 function d8Go(p){d8Page=p;render8D();}
-async function delD8(id){if(!confirm('確定刪除？'))return;try{await api('DELETE','/8d/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}D8_DATA=D8_DATA.filter(d=>d.id!==id);render8D();renderSqe();toast('☁️ 已刪除');}
+async function delD8(id){if(!confirm('確定刪除？'))return;const bk=D8_DATA.find(d=>d.id===id);D8_DATA=D8_DATA.filter(d=>d.id!==id);render8D();renderSqe();toast('☁️ 已刪除');api('DELETE','/8d/'+id).catch(e=>{if(bk)D8_DATA.push(bk);render8D();renderSqe();toast('刪除失敗，已還原',true);});}
 
 // ── AUDIT ──
 let auditEditId=null;
@@ -3802,7 +3814,7 @@ function renderAudit(){
     </td>
   </tr>`).join('');
 }
-async function delAudit(id){if(!confirm('確定刪除？'))return;try{await api('DELETE','/audit/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}AUD_DATA=AUD_DATA.filter(a=>a.id!==id);renderAudit();renderSqe();toast('☁️ 已刪除');}
+async function delAudit(id){if(!confirm('確定刪除？'))return;const bk=AUD_DATA.find(a=>a.id===id);AUD_DATA=AUD_DATA.filter(a=>a.id!==id);renderAudit();renderSqe();toast('☁️ 已刪除');api('DELETE','/audit/'+id).catch(e=>{if(bk)AUD_DATA.push(bk);renderAudit();renderSqe();toast('刪除失敗，已還原',true);});}
 
 // ── PERF ──
 function calcPerfScore(){
@@ -3883,7 +3895,7 @@ function renderPerf(){
     </tr>`;
   }).join('');
 }
-async function delPerf(id){if(!confirm('確定刪除？'))return;try{await api('DELETE','/perf/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}PERF_DATA=PERF_DATA.filter(p=>p.id!==id);renderPerf();toast('☁️ 已刪除');}
+async function delPerf(id){if(!confirm('確定刪除？'))return;const bk=PERF_DATA.find(p=>p.id===id);PERF_DATA=PERF_DATA.filter(p=>p.id!==id);renderPerf();toast('☁️ 已刪除');api('DELETE','/perf/'+id).catch(e=>{if(bk)PERF_DATA.push(bk);renderPerf();toast('刪除失敗，已還原',true);});}
 
 // ═══════════════════════════════════════════════════
 // HEALTH BOARD — 跨模組查詢
@@ -4092,7 +4104,7 @@ function buildNotifications(){
   if(mFail>0) notifs.push({level:'error',icon:'🔴',text:`本月 ${mFail} 批 IQC 不合格`,page:'history'});
 
   // CAR 逾期
-  const overdueCar=CAR_DATA.filter(c=>c.status!=='已關閉'&&c.due<today);
+  const overdueCar=CAR_DATA.filter(c=>c.status!=='已關閉'&&c.due&&c.due<today);
   overdueCar.forEach(c=>notifs.push({level:'error',icon:'🔴',text:`CAR ${c.no} 逾期（${c.sup}）`,page:'sqe'}));
 
   // CAR 今日到期
@@ -4100,7 +4112,7 @@ function buildNotifications(){
     notifs.push({level:'warn',icon:'🟡',text:`CAR ${c.no} 今日到期（${c.sup}）`,page:'sqe'}));
 
   // GS 逾期
-  const gsOverdue=LOAN.filter(l=>l.status==='借出中'&&l.dueDate<today);
+  const gsOverdue=LOAN.filter(l=>l.status==='借出中'&&l.dueDate&&l.dueDate<today);
   gsOverdue.forEach(l=>notifs.push({level:'error',icon:'🔴',text:`GS ${l.gsId} 逾期未歸還（${l.person}）`,page:'gs'}));
 
   // GS 今日到期
@@ -4128,6 +4140,17 @@ function updateNotifBadge(){
   if(!badge)return;
   if(notifs.length===0){badge.style.display='none';}
   else{badge.style.display='';badge.textContent=notifs.length;badge.style.background=errorN>0?'var(--fail)':'var(--warn)';}
+}
+function showStartupAlerts(){
+  const today=todayStr();
+  const msgs=[];
+  const overdueCar=CAR_DATA.filter(c=>c.status!=='已關閉'&&c.due&&c.due<today).length;
+  const gsOverdue=LOAN.filter(l=>l.status==='借出中'&&l.dueDate&&l.dueDate<today).length;
+  const todayCar=CAR_DATA.filter(c=>c.status!=='已關閉'&&c.due===today).length;
+  if(overdueCar>0) msgs.push(`${overdueCar} 筆 CAR 逾期`);
+  if(gsOverdue>0) msgs.push(`${gsOverdue} 件 GS 逾期`);
+  if(todayCar>0) msgs.push(`${todayCar} 筆 CAR 今日到期`);
+  if(msgs.length>0) toast('⚠️ 注意：'+msgs.join('、'), true);
 }
 function showNotifPanel(){
   const panel=document.getElementById('notifPanel');
@@ -4645,29 +4668,13 @@ document.addEventListener('DOMContentLoaded',()=>{
     H.forEach(r=>{const clean=normDate(r.date);if(clean&&clean!==r.date){r.date=clean;dirty=true;}});
     if(dirty)lss(SK.H,H);
     renderDashboard();
-    hideBootSkeleton();
+    hideBootSkeleton();updateNotifBadge();showStartupAlerts();
   } else {
-    apiLoadAll().finally(hideBootSkeleton);
+    apiLoadAll().finally(()=>{hideBootSkeleton();updateNotifBadge();showStartupAlerts();});
   }
-
-  // ── 啟動通知 ──
-  updateNotifBadge();
 
   // 每分鐘更新通知徽章
   setInterval(updateNotifBadge, 60000);
-
-  // 啟動提醒：逾期項目 Toast
-  setTimeout(()=>{
-    const today=todayStr();
-    const msgs=[];
-    const overdueCar=CAR_DATA.filter(c=>c.status!=='已關閉'&&c.due<today).length;
-    const gsOverdue=LOAN.filter(l=>l.status==='借出中'&&l.dueDate<today).length;
-    const todayCar=CAR_DATA.filter(c=>c.status!=='已關閉'&&c.due===today).length;
-    if(overdueCar>0) msgs.push(`${overdueCar} 筆 CAR 逾期`);
-    if(gsOverdue>0) msgs.push(`${gsOverdue} 件 GS 逾期`);
-    if(todayCar>0) msgs.push(`${todayCar} 筆 CAR 今日到期`);
-    if(msgs.length>0) toast('⚠️ 注意：'+msgs.join('、'), true);
-  }, 1200);
 });
 </script>
 </body>
