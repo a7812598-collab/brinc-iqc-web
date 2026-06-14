@@ -22,7 +22,7 @@ body::after{content:'';position:fixed;inset:-30%;z-index:-1;pointer-events:none;
     radial-gradient(620px circle at 85% 15%, rgba(99,102,241,.36), transparent 55%),
     radial-gradient(660px circle at 75% 80%, rgba(14,116,144,.40), transparent 55%),
     radial-gradient(520px circle at 25% 85%, rgba(5,150,105,.34), transparent 55%);
-  animation:bgFloat 12s ease-in-out infinite;}
+  }
 @keyframes bgFloat{
   0%,100%{transform:translate(0,0) scale(1);}
   25%{transform:translate(6%,-4%) scale(1.12);}
@@ -30,7 +30,7 @@ body::after{content:'';position:fixed;inset:-30%;z-index:-1;pointer-events:none;
   75%{transform:translate(4%,3%) scale(1.1);}
 }
 /* 浮動光球 */
-.orb{position:fixed;border-radius:50%;z-index:-1;pointer-events:none;filter:blur(44px);opacity:.72;}
+.orb{position:fixed;border-radius:50%;z-index:-1;pointer-events:none;filter:blur(34px);opacity:.5;will-change:transform;}
 .orb.o1{width:380px;height:380px;background:radial-gradient(circle,rgba(8,145,178,.85),transparent 70%);top:-80px;left:6%;animation:orbA 11s ease-in-out infinite;}
 .orb.o2{width:440px;height:440px;background:radial-gradient(circle,rgba(99,102,241,.72),transparent 70%);bottom:-100px;right:8%;animation:orbB 14s ease-in-out infinite;}
 .orb.o3{width:320px;height:320px;background:radial-gradient(circle,rgba(5,150,105,.7),transparent 70%);top:42%;left:52%;animation:orbC 12s ease-in-out infinite;}
@@ -73,15 +73,21 @@ main{flex:1;padding:24px;width:100%;overflow-x:auto;min-width:0;}
 .kpi-value{font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.5px;}
 .kpi-value.pass{color:var(--pass)}.kpi-value.fail{color:var(--fail)}.kpi-value.accent{color:var(--accent)}.kpi-value.warn{color:var(--warn)}
 .kpi-sub{font-size:11px;color:var(--text3);margin-top:4px;}
-.section{background:rgba(255,255,255,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.6);border-radius:14px;margin-bottom:16px;overflow:hidden;box-shadow:0 4px 20px rgba(8,145,178,.06);}
+.section{background:#fff;border:1px solid var(--border);border-radius:14px;margin-bottom:16px;overflow:hidden;box-shadow:0 4px 18px rgba(8,145,178,.05);}
 .section-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;background:linear-gradient(135deg,#f0f8fa 0%,#fff 100%);}
 .section-title{font-size:14px;font-weight:700;color:var(--text);}.section-sub{font-size:11px;color:var(--text3);}
 .table-wrap{overflow-x:auto;}
 table{width:100%;border-collapse:collapse;}
-th{padding:9px 14px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);background:#f8f9ff;font-weight:700;white-space:nowrap;border-bottom:1px solid var(--border);}
-td{padding:9px 14px;border-top:1px solid var(--border);font-size:13px;vertical-align:middle;}
+th{padding:10px 14px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);background:#eef7f9;font-weight:700;white-space:nowrap;border-bottom:2px solid var(--border);}
+th.sortable{cursor:pointer;user-select:none;transition:background .15s;}
+th.sortable:hover{background:#dceef2;color:var(--accent);}
+th.sortable::after{content:'⇅';opacity:.35;margin-left:5px;font-size:10px;}
+th.sort-asc::after{content:'↑';opacity:1;color:var(--accent);}
+th.sort-desc::after{content:'↓';opacity:1;color:var(--accent);}
+td{padding:10px 14px;border-top:1px solid var(--border);font-size:13px;vertical-align:middle;}
+tbody tr:nth-child(even) td{background:rgba(8,145,178,.022);}
 tr.selected td{background:rgba(8,145,178,.06)!important;}
-tr:hover td{background:rgba(8,145,178,.025);}
+tr:hover td{background:rgba(8,145,178,.07);}
 .mono{font-family:var(--mono);font-size:12px;color:var(--text2);}
 .tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;}
 .tag-pass{background:#d1fae5;color:#065f46;}.tag-fail{background:#fee2e2;color:#991b1b;}
@@ -119,7 +125,17 @@ tr:hover td{background:rgba(8,145,178,.025);}
 .chk-cell{width:32px;}
 input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;}
 .empty{text-align:center;padding:40px;color:var(--text3);}
-.empty-icon{font-size:32px;margin-bottom:8px;}.empty-msg{font-size:13px;}
+.empty-icon{font-size:40px;margin-bottom:10px;opacity:.5;}.empty-msg{font-size:13px;color:var(--text3);}
+.skeleton{background:linear-gradient(90deg,#eef4f6 25%,#f6fafb 50%,#eef4f6 75%);background-size:200% 100%;animation:shimmer 1.3s infinite;border-radius:6px;}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel-row{height:40px;margin:8px 0;}
+#bootSkeleton{position:fixed;inset:0;z-index:400;background:var(--bg);padding:84px 24px 24px;transition:opacity .45s ease;}
+#bootSkeleton.hide{opacity:0;pointer-events:none;}
+.boot-inner{max-width:1240px;margin:0 auto;}
+.boot-title{height:26px;width:240px;border-radius:8px;margin-bottom:22px;}
+.sk-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:14px;margin-bottom:20px;}
+.sk-card{height:118px;border-radius:16px;}
+.sk-section{height:210px;border-radius:14px;margin-bottom:16px;}
 #toast{position:fixed;bottom:24px;right:24px;background:var(--pass);color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;opacity:0;transform:translateY(10px);transition:all .2s;pointer-events:none;z-index:9999;box-shadow:0 4px 20px rgba(5,150,105,.3);}
 #toast.show{opacity:1;transform:translateY(0)}
 #toast.error{background:var(--fail);box-shadow:0 4px 20px rgba(220,38,38,.3);}
@@ -165,21 +181,20 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
 /* === 靈動 KPI 動畫 === */
 @keyframes kpiIn{from{opacity:0;transform:translateY(16px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);}}
-.kpi{animation:kpiIn .55s cubic-bezier(.22,1,.36,1) both;}
-.kpi-row .kpi:nth-child(1){animation-delay:.03s}
-.kpi-row .kpi:nth-child(2){animation-delay:.09s}
-.kpi-row .kpi:nth-child(3){animation-delay:.15s}
-.kpi-row .kpi:nth-child(4){animation-delay:.21s}
-.kpi-row .kpi:nth-child(5){animation-delay:.27s}
-.kpi-row .kpi:nth-child(6){animation-delay:.33s}
+.kpi-row.intro .kpi{animation:kpiIn .5s cubic-bezier(.22,1,.36,1) both;}
+.kpi-row.intro .kpi:nth-child(1){animation-delay:.03s}
+.kpi-row.intro .kpi:nth-child(2){animation-delay:.08s}
+.kpi-row.intro .kpi:nth-child(3){animation-delay:.13s}
+.kpi-row.intro .kpi:nth-child(4){animation-delay:.18s}
+.kpi-row.intro .kpi:nth-child(5){animation-delay:.23s}
+.kpi-row.intro .kpi:nth-child(6){animation-delay:.28s}
 .kpi::after{content:'';position:absolute;inset:0;border-radius:16px;background:radial-gradient(160px circle at var(--mx,50%) var(--my,50%),rgba(8,145,178,.13),transparent 62%);opacity:0;transition:opacity .3s;pointer-events:none;}
 .kpi:hover::after{opacity:1;}
 .kpi:hover::before{filter:brightness(1.15);}
 .kpi-value{display:inline-block;}
 .kpi:hover .kpi-value{transition:transform .2s;transform:scale(1.06);}
 .spark{width:100%;height:30px;margin-top:9px;display:block;overflow:visible;}
-.spark path[fill="none"]{stroke-dasharray:200;stroke-dashoffset:200;animation:sparkDraw 1s ease .2s forwards;}
-@keyframes sparkDraw{to{stroke-dashoffset:0}}
+/* 走勢圖即時顯示 */
 .doc-link{display:inline-flex;align-items:center;gap:3px;background:#f0f4ff;border:1px solid #c7d2fe;border-radius:6px;padding:2px 9px;font-size:11px;color:var(--accent);text-decoration:none;cursor:pointer;font-weight:600;}
 .doc-link:hover{background:#e0e7ff;border-color:var(--accent);}
 .tag-npi{background:#cffafe;color:#155e75;}
@@ -224,7 +239,17 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
 </style>
 </head>
 <body>
-<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div><div class="orb o4"></div><div class="orb o5"></div>
+<div class="orb o1"></div><div class="orb o2"></div>
+<div id="bootSkeleton">
+  <div class="boot-inner">
+    <div class="boot-title skeleton"></div>
+    <div class="sk-kpis">
+      <div class="sk-card skeleton"></div><div class="sk-card skeleton"></div><div class="sk-card skeleton"></div><div class="sk-card skeleton"></div><div class="sk-card skeleton"></div>
+    </div>
+    <div class="sk-section skeleton"></div>
+    <div class="sk-section skeleton"></div>
+  </div>
+</div>
 <div class="app">
 <header>
   <div class="logo">
@@ -968,9 +993,8 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
 <!-- MODAL: Part Feature Template -->
 <div class="modal-overlay" id="featModal">
   <div class="modal md">
-    <div class="modal-hdr"><div><div class="modal-title">⚙️ 特徵點樣板</div><div id="featSub" style="font-size:11px;color:var(--text2);margin-top:2px;"></div></div><button class="modal-close" onclick="closeModal('featModal')">✕</button></div>
-    <div class="modal-body" id="featBody"></div>
-    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('featModal')">關閉</button></div>
+    <div class="modal-hdr"><div><div class="modal-title">⚙️ 特徵點樣板</div><div id="featSub" style="font-size:11px;color:var(--text2);margin-top:2px;"></div></div><button class="modal-close" onclick="closeFeatModal()">✕</button></div>    <div class="modal-body" id="featBody"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeFeatModal()">關閉</button><button class="btn btn-primary" onclick="saveFeatsAndClose()">💾 儲存特徵點</button></div>
   </div>
 </div>
 
@@ -1431,9 +1455,14 @@ const ls=k=>{try{const d=localStorage.getItem(k);return d?JSON.parse(d):null;}ca
 const lss=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 
 // 從 Azure SQL 載入所有資料（取代 localStorage 初始化）
+setTimeout(function(){var e=document.getElementById('bootSkeleton');if(e)e.classList.add('hide');},6000);
+function hideBootSkeleton(){
+  const el=document.getElementById('bootSkeleton');
+  if(el){el.classList.add('hide');setTimeout(()=>el.remove(),500);}
+}
 async function apiLoadAll(){
   try{
-    const [h,p,gs,loans,car,d8,aud,perf,npiRecs,npiIss] = await Promise.all([
+    const [h,p,gs,loans,car,d8,aud,perf,npiRecs,npiIss,featsAll,measAll] = await Promise.all([
       api('GET','/iqc'),
       api('GET','/parts'),
       api('GET','/gs'),
@@ -1444,6 +1473,8 @@ async function apiLoadAll(){
       api('GET','/perf'),
       api('GET','/npi'),
       api('GET','/npi-issues'),
+      api('GET','/feats').catch(()=>[]),
+      api('GET','/measurements').catch(()=>({})),
     ]);
     H = h.map(r=>({id:r.id,date:normDate(r.date||''),sup:r.sup,supCode:r.sup_code||'',part:r.part,pname:r.pname||'',total:r.total,pass:r.pass,fail:r.fail,result:r.result,oqc:r.oqc||'',note:r.note||''}));
     P = p.map(r=>({id:r.id,sup:r.sup,code:r.code||'',part:r.part,craft:r.craft||'',consec:r.consec,rate:r.rate,note:r.note||''}));
@@ -1455,25 +1486,20 @@ async function apiLoadAll(){
     PERF_DATA = perf.map(r=>({id:r.id,sup:r.sup,period:r.period,otd:r.otd||0,qual:r.qual||0,d8:r.d8||0,doc:r.doc||0,score:r.score||0,grade:r.grade||'',note:r.note||''}));
     NPI_DATA = npiRecs.map(r=>({id:r.id,npiId:r.npi_id,project:r.project,sup:r.sup||'',part:r.part||'',pname:r.pname||'',stage:r.stage||'',qty:r.qty||1,date:normDate(r.date||''),sqe:r.sqe||'',result:r.result||'待審核',release:r.release||'待審核',note:r.note||'',measurements:r.measurements?JSON.parse(r.measurements):null}));
     NPI_ISSUES = npiIss.map(r=>({id:r.id,npiId:r.npi_id,desc:r.desc,feat:r.feat||'',sev:r.sev||'Major',owner:r.owner||'',due:normDate(r.due||''),status:r.status||'Open',closeNote:r.close_note||''}));
-    // 載入所有特徵點樣板 → 組成 F
-    try{
-      const featsAll=await api('GET','/feats');
-      F={};
-      featsAll.forEach(r=>{
-        const fk=r.feat_key;
-        if(!F[fk])F[fk]=[];
-        F[fk].push({id:r.id,name:r.feat_name,type:r.feat_type,lsl:r.lsl||'',usl:r.usl||'',unit:r.unit||'',equip:r.equip||''});
-        if(r.drawing&&!F[fk]._drawing)F[fk]._drawing=r.drawing;
-      });
-    }catch(e){console.error('載入特徵點失敗:',e.message);}
-    // 載入所有量測明細 → 組成 M
-    try{
-      const measAll=await api('GET','/measurements');
-      M={};
-      Object.keys(measAll).forEach(k=>{M[k]=measAll[k];});
-    }catch(e){console.error('載入量測失敗:',e.message);}
+    // 組合特徵點樣板 → F(用並行已抓回的資料)
+    F={};
+    (featsAll||[]).forEach(r=>{
+      const fk=r.feat_key;
+      if(!F[fk])F[fk]=[];
+      F[fk].push({id:r.id,name:r.feat_name,type:r.feat_type,lsl:r.lsl||'',usl:r.usl||'',unit:r.unit||'',equip:r.equip||''});
+      if(r.drawing&&!F[fk]._drawing)F[fk]._drawing=r.drawing;
+    });
+    // 組合量測明細 → M(用並行已抓回的資料)
+    M={};
+    Object.keys(measAll||{}).forEach(k=>{M[k]=measAll[k];});
     toast('☁️ 已從 Azure 載入最新資料');
     renderDashboard();renderParts();renderHistory();
+    hideBootSkeleton();
   } catch(e){
     console.warn('Azure API unavailable, using localStorage:', e.message);
     toast('📱 離線模式：使用本機資料');
@@ -1843,12 +1869,19 @@ function animateCounters(container){
 // 游標光暈跟隨(事件委派,只綁一次)
 if(!window._kpiGlowBound){
   window._kpiGlowBound=true;
+  let _glowTick=false;
   document.addEventListener('mousemove',e=>{
-    const k=e.target.closest && e.target.closest('.kpi');
-    if(!k)return;
-    const r=k.getBoundingClientRect();
-    k.style.setProperty('--mx',(e.clientX-r.left)+'px');
-    k.style.setProperty('--my',(e.clientY-r.top)+'px');
+    if(_glowTick)return;
+    _glowTick=true;
+    const cx=e.clientX,cy=e.clientY,tgt=e.target;
+    requestAnimationFrame(()=>{
+      _glowTick=false;
+      const k=tgt.closest && tgt.closest('.kpi');
+      if(!k)return;
+      const r=k.getBoundingClientRect();
+      k.style.setProperty('--mx',(cx-r.left)+'px');
+      k.style.setProperty('--my',(cy-r.top)+'px');
+    });
   });
 }
 function renderDashboard(){
@@ -1894,9 +1927,14 @@ function renderDashboard(){
     <div class="kpi" style="cursor:pointer" onclick="showPage('gs')"><div class="kpi-label">GS 借出中</div><div class="kpi-value ${gsOverdue>0?'fail':gsOut>0?'warn':'pass'}">${gsOut}</div><div class="kpi-sub">${gsOverdue>0?`逾期 ${gsOverdue} 件`:'無逾期'}</div></div>
   `;
 
-  // 靈動:數字滾動 + 游標光暈
-  animateCounters(document.getElementById('kpiRow'));
-  animateCounters(document.getElementById('kpiRow2'));
+  // 靈動效果只在首次進入播放,切頁/操作後即時呈現
+  if(window._dashFirst!==false){
+    window._dashFirst=false;
+    const r1=document.getElementById('kpiRow'),r2=document.getElementById('kpiRow2');
+    if(r1){r1.classList.add('intro');animateCounters(r1);}
+    if(r2){r2.classList.add('intro');animateCounters(r2);}
+    setTimeout(()=>{r1&&r1.classList.remove('intro');r2&&r2.classList.remove('intro');},900);
+  }
 
   // 待處理事項
   const alerts=[];
@@ -2442,6 +2480,25 @@ function saveFeatsToCloud(fk){
   const drawing=(F[fk]&&F[fk]._drawing)||'';
   api('POST','/feats',{key:fk,feats:arr,drawing}).catch(e=>console.error('特徵點同步失敗:',e.message));
 }
+// 明確儲存特徵點(確保最後編輯也存到)+ 關閉
+async function saveFeatsAndClose(){
+  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  const arr=Array.isArray(F[featKey])?F[featKey]:[];
+  const drawing=(F[featKey]&&F[featKey]._drawing)||'';
+  try{
+    await api('POST','/feats',{key:featKey,feats:arr,drawing});
+    toast('☁️ 特徵點已儲存');
+  }catch(e){toast('儲存失敗：'+e.message,true);return;}
+  renderParts();closeModal('featModal');
+}
+// 關閉前也確保儲存(避免最後一格未失焦遺漏)
+async function closeFeatModal(){
+  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  const arr=Array.isArray(F[featKey])?F[featKey]:[];
+  const drawing=(F[featKey]&&F[featKey]._drawing)||'';
+  try{await api('POST','/feats',{key:featKey,feats:arr,drawing});}catch(e){}
+  renderParts();closeModal('featModal');
+}
 // Field schema per measurement type
 const FEAT_FIELD_MAP={
   '尺寸量測':{lsl:true,usl:true,unit:true},
@@ -2502,13 +2559,13 @@ function uploadDrawing(inp){
     if(!F[featKey])F[featKey]=[];
     if(!Array.isArray(F[featKey]))F[featKey]=[];
     F[featKey]._drawing=e.target.result;
-    saveFeatsToCloud(featKey);renderFeatModal();renderParts();toast('☁️ Drawing 已上傳');
+    renderFeatModal();renderParts();toast('Drawing 已加入，記得按「儲存特徵點」');
   };
   fr.readAsDataURL(file);
 }
 function removeDrawing(){
   if(F[featKey])F[featKey]._drawing='';
-  saveFeatsToCloud(featKey);renderFeatModal();renderParts();
+  renderFeatModal();renderParts();
 }
 function viewDrawing(key){
   const raw=F[key];const d=(raw&&raw._drawing)||'';if(!d)return;
@@ -2517,17 +2574,17 @@ function viewDrawing(key){
 function updFeat(i,k,v){
   if(!F[featKey])F[featKey]=[];
   if(Array.isArray(F[featKey])&&F[featKey][i])F[featKey][i][k]=v;
-  saveFeatsToCloud(featKey);renderParts();
+  renderParts();
 }
 function addFeat(){
   if(!F[featKey])F[featKey]=[];
   if(!Array.isArray(F[featKey]))F[featKey]=[];
   F[featKey].push({id:Date.now(),name:'特徵點'+(F[featKey].length+1),type:'尺寸量測',lsl:'',usl:'',unit:'mm',equip:''});
-  saveFeatsToCloud(featKey);renderFeatModal();renderParts();
+  renderFeatModal();renderParts();
 }
 function delFeat(i){
   if(Array.isArray(F[featKey]))F[featKey].splice(i,1);
-  saveFeatsToCloud(featKey);renderFeatModal();renderParts();
+  renderFeatModal();renderParts();
 }
 
 // ═══════════════════════════════════════════════════
@@ -4588,8 +4645,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     H.forEach(r=>{const clean=normDate(r.date);if(clean&&clean!==r.date){r.date=clean;dirty=true;}});
     if(dirty)lss(SK.H,H);
     renderDashboard();
+    hideBootSkeleton();
   } else {
-    apiLoadAll();
+    apiLoadAll().finally(hideBootSkeleton);
   }
 
   // ── 啟動通知 ──
