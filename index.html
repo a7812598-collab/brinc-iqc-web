@@ -129,6 +129,25 @@ input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent);cursor:po
 .skeleton{background:linear-gradient(90deg,#eef4f6 25%,#f6fafb 50%,#eef4f6 75%);background-size:200% 100%;animation:shimmer 1.3s infinite;border-radius:6px;}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .skel-row{height:40px;margin:8px 0;}
+#loginScreen{position:fixed;inset:0;z-index:600;background:linear-gradient(135deg,#0e7490 0%,#0891b2 55%,#0369a1 100%);display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-card{background:#fff;border-radius:20px;padding:40px 36px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+.login-logo{text-align:center;font-size:22px;font-weight:800;color:var(--accent2);}
+.login-sub{text-align:center;font-size:12px;color:var(--text3);margin-bottom:26px;}
+.login-card label{display:block;font-size:12px;font-weight:700;color:var(--text2);margin:14px 0 6px;}
+.login-card input{width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:10px;font-size:14px;box-sizing:border-box;}
+.login-card input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(8,145,178,.12);}
+.login-btn{width:100%;margin-top:22px;padding:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;}
+.login-btn:hover{opacity:.92;}.login-btn:disabled{opacity:.6;cursor:wait;}
+.login-err{color:var(--fail);font-size:12.5px;text-align:center;margin-top:14px;min-height:16px;}
+.user-chip{display:flex;align-items:center;gap:8px;margin-left:auto;color:#fff;font-size:12.5px;}
+.user-chip button{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;padding:4px 10px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer;}
+.user-chip button:hover{background:rgba(255,255,255,.32);}
+/* 品檢員:不可刪除 */
+body.role-iqc button[onclick*="del"],body.role-iqc button[onclick*="batchDelete"]{display:none!important;}
+/* 訪客:唯讀,隱藏所有新增/編輯/刪除/儲存/匯入按鈕 */
+body.role-guest button[onclick*="del"],body.role-guest button[onclick*="add"],body.role-guest button[onclick*="save"],body.role-guest button[onclick*="open"][onclick*="Modal"],body.role-guest button[onclick*="edit"],body.role-guest button[onclick*="Imp"],body.role-guest .btn-primary{display:none!important;}
+/* 訪客:遮蔽 Loading Rate 區塊 */
+body.role-guest #loadingRateSection{display:none!important;}
 #bootSkeleton{position:fixed;inset:0;z-index:400;background:var(--bg);padding:84px 24px 24px;transition:opacity .45s ease;}
 #bootSkeleton.hide{opacity:0;pointer-events:none;}
 .boot-inner{max-width:1240px;margin:0 auto;}
@@ -239,6 +258,18 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
 </style>
 </head>
 <body>
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">Solution Consultant</div>
+    <div class="login-sub">IQC 品質管理系統</div>
+    <label>帳號</label>
+    <input id="loginUser" type="text" onkeydown="if(event.key==='Enter')doLogin()">
+    <label>密碼</label>
+    <input id="loginPass" type="password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">登入</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
 <div class="orb o1"></div><div class="orb o2"></div>
 <div id="bootSkeleton">
   <div class="boot-inner">
@@ -285,6 +316,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
   <button onclick="showPage('import')">📥 批次匯入</button>
   <button onclick="showPage('add')">➕ 新增記錄</button>
   <button onclick="showPage('parts')">🔧 料號主檔</button>
+  <button onclick="showPage('users')">👥 使用者管理</button>
   <button onclick="showPage('guide')">📖 說明</button>
 </aside>
 <main>
@@ -366,6 +398,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
   </div>
 
   <!-- Loading Rate Chart -->
+  <div id="loadingRateSection">
   <div class="section">
     <div class="section-header">
       <div class="section-title">抽檢 Loading Rate 趨勢</div>
@@ -388,6 +421,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
       </div>
     </div>
   </div>
+</div>
 </div>
 
 <!-- ═══ HISTORY ═══ -->
@@ -794,6 +828,38 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
 </div>
 
 <!-- ═══ GUIDE PAGE ═══ -->
+<div class="page" id="page-users">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">👥 使用者管理</div>
+      <button class="btn btn-primary btn-sm" onclick="openUserModal()">+ 新增使用者</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>帳號</th><th>顯示名稱</th><th>角色</th><th>狀態</th><th>操作</th></tr></thead>
+        <tbody id="usersTbody"></tbody>
+      </table>
+    </div>
+    <div style="padding:14px 16px;font-size:12px;color:var(--text3);line-height:1.7;">
+      角色說明：<b>管理者</b>=全部功能+使用者管理｜<b>品檢員</b>=抽檢/料號/Golden Sample(不可刪除)｜<b>訪客</b>=唯讀儀表板(不含Loading Rate)/趨勢/健康看板
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="userModal">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-hdr"><div class="modal-title" id="userModalTitle">新增使用者</div><button class="modal-close" onclick="closeModal('userModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>帳號 *</label><input class="fi" id="u_username"></div>
+      <div class="form-group"><label id="u_passLabel">密碼 *</label><input class="fi" id="u_password" type="password"></div>
+      <div class="form-group"><label>顯示名稱</label><input class="fi" id="u_display"></div>
+      <div class="form-group"><label>角色 *</label><select class="fi" id="u_role"><option value="iqc">品檢員</option><option value="admin">管理者</option><option value="guest">訪客</option></select></div>
+      <div class="form-group"><label>狀態</label><select class="fi" id="u_active"><option value="1">啟用</option><option value="0">停用</option></select></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('userModal')">取消</button><button class="btn btn-primary" onclick="saveUser()">儲存</button></div>
+  </div>
+</div>
+
 <div class="page" id="page-guide">
 <div class="section">
   <div class="section-header"><div class="section-title">📖 系統說明 — 所有計分計算方式</div></div>
@@ -1437,6 +1503,127 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
 // ══════════════════════════════════════════════════
 const API_BASE = 'https://brinc-iqc-fn.azurewebsites.net/api';
 const API_KEY  = '255hf7LaWXm0QIn-wE7U4MH8_-MScT9Vhiq7Z_BnJr8iAzFu-6hxbg==';
+// ===== 登入權限系統 =====
+let currentUser=null;
+const ROLE_PAGES={
+  admin:['dashboard','history','eval','npi','sqe','trend','health','gs','import','add','parts','guide','users'],
+  iqc:['dashboard','history','add','parts','gs','guide'],
+  guest:['dashboard','trend','health','guide']
+};
+function doLogin(){
+  const u=document.getElementById('loginUser').value.trim();
+  const p=document.getElementById('loginPass').value;
+  const err=document.getElementById('loginErr');const btn=document.getElementById('loginBtn');
+  if(!u||!p){err.textContent='請輸入帳號和密碼';return;}
+  err.textContent='';btn.disabled=true;btn.textContent='登入中…';
+  fetch(`${API_BASE}/login`,{method:'POST',headers:{'Content-Type':'application/json','x-functions-key':API_KEY},body:JSON.stringify({username:u,password:p})})
+    .then(r=>{if(!r.ok)throw new Error('帳號或密碼錯誤');return r.json();})
+    .then(user=>{
+      currentUser=user;
+      try{sessionStorage.setItem('iqcUser',JSON.stringify(user));}catch(e){}
+      document.getElementById('loginScreen').style.display='none';
+      applyPermissions();
+      startApp();
+    })
+    .catch(e=>{err.textContent=e.message||'登入失敗';btn.disabled=false;btn.textContent='登入';});
+}
+let USERS=[],userEditId=null;
+async function renderUsers(){
+  const tb=document.getElementById('usersTbody');
+  tb.innerHTML='<tr><td colspan="5" class="empty">載入中…</td></tr>';
+  try{USERS=await api('GET','/users');}catch(e){tb.innerHTML='<tr><td colspan="5" class="empty">載入失敗</td></tr>';return;}
+  const rn={admin:'管理者',iqc:'品檢員',guest:'訪客'};
+  if(!USERS.length){tb.innerHTML='<tr><td colspan="5" class="empty"><div class="empty-icon">👥</div><div class="empty-msg">尚無使用者</div></td></tr>';return;}
+  tb.innerHTML=USERS.map(u=>`<tr>
+    <td><b>${u.username}</b></td>
+    <td>${u.displayName||'—'}</td>
+    <td><span class="tag ${u.role==='admin'?'tag-fail':u.role==='guest'?'tag-pass':''}">${rn[u.role]||u.role}</span></td>
+    <td>${u.active===false?'<span style="color:var(--text3)">停用</span>':'<span style="color:var(--pass)">啟用</span>'}</td>
+    <td><button class="btn btn-sm" onclick="editUser(${u.id})">編輯</button> <button class="btn btn-sm" style="color:var(--fail)" onclick="delUser(${u.id})">刪除</button></td>
+  </tr>`).join('');
+}
+function openUserModal(){
+  userEditId=null;
+  document.getElementById('userModalTitle').textContent='新增使用者';
+  document.getElementById('u_username').value='';document.getElementById('u_username').disabled=false;
+  document.getElementById('u_password').value='';
+  document.getElementById('u_passLabel').textContent='密碼 *';
+  document.getElementById('u_display').value='';
+  document.getElementById('u_role').value='iqc';
+  document.getElementById('u_active').value='1';
+  openModal('userModal');
+}
+function editUser(id){
+  const u=USERS.find(x=>x.id===id);if(!u)return;
+  userEditId=id;
+  document.getElementById('userModalTitle').textContent='編輯使用者';
+  document.getElementById('u_username').value=u.username;document.getElementById('u_username').disabled=true;
+  document.getElementById('u_password').value='';
+  document.getElementById('u_passLabel').textContent='密碼（留空=不修改）';
+  document.getElementById('u_display').value=u.displayName||'';
+  document.getElementById('u_role').value=u.role||'iqc';
+  document.getElementById('u_active').value=u.active===false?'0':'1';
+  openModal('userModal');
+}
+async function saveUser(){
+  const username=document.getElementById('u_username').value.trim();
+  const password=document.getElementById('u_password').value;
+  const displayName=document.getElementById('u_display').value.trim();
+  const role=document.getElementById('u_role').value;
+  const active=document.getElementById('u_active').value==='1';
+  if(!username){toast('請輸入帳號',true);return;}
+  if(!userEditId&&!password){toast('新增帳號需設定密碼',true);return;}
+  try{
+    if(userEditId){await api('PUT','/users/'+userEditId,{password,displayName,role,active});}
+    else{await api('POST','/users',{username,password,displayName,role});}
+  }catch(e){toast('儲存失敗：'+e.message,true);return;}
+  if(userEditId&&currentUser&&username===currentUser.username){
+    currentUser.displayName=displayName;currentUser.role=role;
+    try{sessionStorage.setItem('iqcUser',JSON.stringify(currentUser));}catch(e){}
+    applyPermissions();
+  }
+  closeModal('userModal');renderUsers();toast('☁️ 已儲存');
+}
+async function delUser(id){
+  const u=USERS.find(x=>x.id===id);
+  if(u&&u.username===(currentUser&&currentUser.username)){toast('不能刪除自己的帳號',true);return;}
+  if(!confirm('確定刪除此使用者？'))return;
+  try{await api('DELETE','/users/'+id);}catch(e){toast('刪除失敗：'+e.message,true);return;}
+  USERS=USERS.filter(x=>x.id!==id);renderUsers();toast('☁️ 已刪除');
+}
+function startApp(){
+  const sk=document.getElementById('bootSkeleton');if(sk){sk.classList.remove('hide');sk.style.display='';}
+  apiLoadAll().finally(()=>{hideBootSkeleton();updateNotifBadge();showStartupAlerts();});
+}
+function doLogout(){
+  currentUser=null;
+  try{sessionStorage.removeItem('iqcUser');}catch(e){}
+  location.reload();
+}
+function applyPermissions(){
+  if(!currentUser)return;
+  const role=currentUser.role||'iqc';
+  const allowed=(currentUser.perms&&currentUser.perms.pages)||ROLE_PAGES[role]||ROLE_PAGES.iqc;
+  // 側邊選單顯隱
+  document.querySelectorAll('.sidebar button').forEach(btn=>{
+    const m=(btn.getAttribute('onclick')||'').match(/showPage\('([a-z]+)'\)/);
+    const pg=m?m[1]:null;
+    btn.style.display=(pg&&allowed.includes(pg))?'':'none';
+  });
+  // 角色 class(供 CSS 控制操作權限)
+  document.body.classList.remove('role-admin','role-iqc','role-guest');
+  document.body.classList.add('role-'+role);
+  // header 顯示使用者 + 登出
+  let chip=document.getElementById('userChip');
+  if(!chip){
+    chip=document.createElement('div');chip.id='userChip';chip.className='user-chip';
+    document.querySelector('header').appendChild(chip);
+  }
+  const roleNames={admin:'管理者',iqc:'品檢員',guest:'訪客'};
+  chip.innerHTML=`👤 ${currentUser.displayName||currentUser.username}（${roleNames[role]||role}）<button onclick="doLogout()">登出</button>`;
+  // 預設切到第一個有權限的頁
+  if(!allowed.includes('dashboard'))showPage(allowed[0]);
+}
 // ══════════════════════════════════════════════════
 
 // API helper（帶 function key 驗證）
@@ -2689,7 +2876,7 @@ function showPage(name){
     if(pg&&!pg.innerHTML.trim())pg.innerHTML=gsPageHTML();
   }
   document.getElementById('page-'+name).classList.add('active');
-  const idx=['dashboard','history','eval','npi','sqe','trend','health','gs','import','add','parts','guide'].indexOf(name);
+  const idx=['dashboard','history','eval','npi','sqe','trend','health','gs','import','add','parts','users','guide'].indexOf(name);
   document.querySelectorAll('.sidebar button')[idx]?.classList.add('active');
   if(name==='dashboard')renderDashboard();
   else if(name==='history'){refreshSups();renderHistory();initAnalysisSups();}
@@ -2701,6 +2888,7 @@ function showPage(name){
   else if(name==='trend'){renderTrend();}
   else if(name==='health'){renderHealthBoard();}
   else if(name==='gs'){renderGsDashboard();renderGsList();renderLoanList();}
+  else if(name==='users')renderUsers();
   else if(name==='guide'){}
 }
 
@@ -4661,17 +4849,16 @@ function toast(msg,err=false){const t=document.getElementById('toast');t.textCon
 document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('headerDate').textContent=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric'});
 
-  // ── 嘗試從 Azure SQL 載入（如失敗則用 localStorage）──
-  if(API_BASE.includes('YOUR_FUNCTIONAPP')){
-    // 尚未設定 API，使用 localStorage
-    let dirty=false;
-    H.forEach(r=>{const clean=normDate(r.date);if(clean&&clean!==r.date){r.date=clean;dirty=true;}});
-    if(dirty)lss(SK.H,H);
-    renderDashboard();
-    hideBootSkeleton();updateNotifBadge();showStartupAlerts();
-  } else {
-    apiLoadAll().finally(()=>{hideBootSkeleton();updateNotifBadge();showStartupAlerts();});
-  }
+  // ── 檢查登入狀態 ──
+  try{
+    const saved=sessionStorage.getItem('iqcUser');
+    if(saved){
+      currentUser=JSON.parse(saved);
+      document.getElementById('loginScreen').style.display='none';
+      applyPermissions();
+      startApp();
+    }
+  }catch(e){}
 
   // 每分鐘更新通知徽章
   setInterval(updateNotifBadge, 60000);
