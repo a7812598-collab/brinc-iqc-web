@@ -1670,7 +1670,7 @@ function applyPermissions(){
     document.querySelector('header').appendChild(chip);
   }
   const roleNames={admin:'管理者',iqc:'品檢員',guest:'訪客'};
-  chip.innerHTML=`👤 ${currentUser.displayName||currentUser.username}（${roleNames[role]||role}）<button onclick="runApiDiag()" style="margin-right:6px;background:#333;border:1px solid #6c63ff;color:#a9a6ff;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:12px">🔌 API診斷</button><button onclick="doLogout()">登出</button>`;
+  chip.innerHTML=`👤 ${currentUser.displayName||currentUser.username}（${roleNames[role]||role}）<span id="_lastSync" style="font-size:11px;color:#888;margin-right:10px;"></span><button onclick="apiLoadAll()" style="margin-right:6px;background:#1a3a1a;border:1px solid #2a6a2a;color:#6fc96f;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:12px">🔄 立即同步</button><button onclick="runApiDiag()" style="margin-right:6px;background:#333;border:1px solid #6c63ff;color:#a9a6ff;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:12px">🔌 API診斷</button><button onclick="doLogout()">登出</button>`;
   // 預設切到第一個有權限的頁
   if(!allowed.includes('dashboard'))showPage(allowed[0]);
 }
@@ -1720,11 +1720,14 @@ const SK={H:'iqc_h4',P:'iqc_p4',M:'iqc_m4',F:'iqc_f4',GS:'iqc_gs4',LOAN:'iqc_loa
 const ls=k=>{try{const d=localStorage.getItem(k);return d?JSON.parse(d):null;}catch{return null;}};
 const lss=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 // Drawing helpers – stored separately so JSON.stringify on F[] array won't lose them
-function getDraw(fk){return ls('iqc_draw_'+fk)||{drawing:'',drawings:[]};}
+// In-memory drawing cache (NOT localStorage — avoids quota errors from large base64 images)
+// Drawings are loaded from cloud on startup and kept in memory for the session
+const _DRAW={};
+function getDraw(fk){return _DRAW[fk]||{drawing:'',drawings:[]};}
 function saveDraw(fk,drawings,drawing){
   const arr=Array.isArray(drawings)?drawings:[];
   const d=drawing!==undefined?drawing:(arr[0]||'');
-  lss('iqc_draw_'+fk,{drawing:d,drawings:arr});
+  _DRAW[fk]={drawing:d,drawings:arr};
 }
 // Debounce: delay fast-typing callbacks to reduce renders
 function debounce(fn,ms){let t;return function(...a){clearTimeout(t);t=setTimeout(()=>fn.apply(this,a),ms);};}
@@ -1745,7 +1748,7 @@ async function apiRetry(method,path,tries){
     catch(e){if(i===tries-1)throw e;await new Promise(r=>setTimeout(r,400));}
   }
 }
-async function apiLoadAll(){
+async function apiLoadAll(silent){
   try{
     const [h,p,gs,loans,car,d8,aud,perf,npiRecs,npiIss,featsAll,measAll] = await Promise.all([
       api('GET','/iqc'),
@@ -1771,31 +1774,44 @@ async function apiLoadAll(){
     PERF_DATA = perf.map(r=>({id:r.id,sup:r.sup,period:r.period,otd:r.otd||0,qual:r.qual||0,d8:r.d8||0,doc:r.doc||0,score:r.score||0,grade:r.grade||'',note:r.note||''}));
     NPI_DATA = npiRecs.map(r=>({id:r.id,npiId:r.npi_id,project:r.project,sup:r.sup||'',part:r.part||'',pname:r.pname||'',stage:r.stage||'',qty:r.qty||1,date:normDate(r.date||''),sqe:r.sqe||'',result:r.result||'待審核',release:r.release||'待審核',note:r.note||'',measurements:r.measurements?JSON.parse(r.measurements):null}));
     NPI_ISSUES = npiIss.map(r=>({id:r.id,npiId:r.npi_id,desc:r.desc,feat:r.feat||'',sev:r.sev||'Major',owner:r.owner||'',due:normDate(r.due||''),status:r.status||'Open',closeNote:r.close_note||''}));
-    // feats (F) are managed purely from localStorage - cloud is write-only backup
-    // This prevents cloud stale data from ever overwriting local edits
-    if(featsAll && Object.keys(ls(SK.F)||{}).length===0){
-      // Only load from cloud if localStorage is completely empty (first-time setup)
+    // Cloud is authoritative: always load from cloud for cross-device sync
+    if(featsAll){
+      const Fcloud={};
       featsAll.forEach(r=>{
         const fk=r.feat_key;
-        if(!F[fk])F[fk]=[];
-        F[fk].push({id:r.id,name:r.feat_name,type:r.feat_type,lsl:r.lsl||'',usl:r.usl||'',unit:r.unit||'',equip:r.equip||''});
-        if(r.drawing){const d=getDraw(fk);if(!d.drawing){saveDraw(fk,d.drawings,r.drawing);}}
+        if(!Fcloud[fk])Fcloud[fk]=[];
+        Fcloud[fk].push({id:r.id,name:r.feat_name,type:r.feat_type,lsl:r.lsl||'',usl:r.usl||'',unit:r.unit||'',equip:r.equip||''});
+        if(r.drawing){
+          // Support both single drawing (string) and array (JSON)
+          let drawings_from_cloud=[],drawing_from_cloud='';
+          try{
+            const parsed=JSON.parse(r.drawing);
+            if(Array.isArray(parsed)){drawings_from_cloud=parsed;drawing_from_cloud=parsed[0]||'';}
+            else{drawing_from_cloud=r.drawing;}
+          }catch{drawing_from_cloud=r.drawing;}
+          // Always update drawings from cloud (cloud is authoritative)
+          saveDraw(fk,drawings_from_cloud.length?drawings_from_cloud:[drawing_from_cloud?drawing_from_cloud:''].filter(Boolean),drawing_from_cloud);
+        }
       });
+      F=Fcloud;
       lss(SK.F,F);
     }
     if(measAll){
       M={};
       Object.keys(measAll).forEach(k=>{M[k]=measAll[k];});
     }
-    toast('☁️ 已從 Azure 載入最新資料');
+    if(!silent){toast('☁️ 已從 Azure 載入最新資料');}
+    // Update last-sync indicator
+    const el=document.getElementById('_lastSync');
+    if(el){const now=new Date();el.textContent='最後同步 '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0');}
     renderDashboard();renderParts();renderHistory();
     hideBootSkeleton();
   } catch(e){
     console.error('Azure API error:', e.message);
-    toast('⚠️ Azure 連線失敗：'+e.message.slice(0,80), true);
-    setTimeout(()=>{
-      if(confirm('Azure API 載入失敗。\n\n錯誤：'+e.message+'\n\n要執行 API 診斷嗎？')){runApiDiag();}
-    },500);
+    if(!silent){
+      toast('⚠️ Azure 連線失敗：'+e.message.slice(0,80), true);
+      setTimeout(()=>{if(confirm('Azure API 載入失敗。\n\n錯誤：'+e.message+'\n\n要執行 API 診斷嗎？')){runApiDiag();}},500);
+    }
   }
 }
 
@@ -2825,17 +2841,19 @@ async function saveFeatsAndClose(){
   if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
   const fk=featKey;
   const arr=Array.isArray(F[fk])?[...F[fk]]:[];
-  const drawing=getDraw(fk).drawing||'';
+  const {drawing:_d1,drawings:_drs1}=getDraw(fk);
+  // Encode all drawings as JSON for cloud storage (enables cross-device image sync)
+  const drawingCloud=_drs1.length>1?JSON.stringify(_drs1):(_d1||'');
   // Step 1: Save to localStorage FIRST (always succeeds)
-  F[fk]=arr; // ensure in-memory matches
+  F[fk]=arr;
   lss(SK.F,F);
   renderParts();closeModal('featModal');
-  // Step 2: Sync to cloud (best-effort)
+  // Step 2: Sync to cloud (required for cross-device sync)
   try{
-    await api('POST','/feats',{key:fk,feats:arr,drawing});
+    await api('POST','/feats',{key:fk,feats:arr,drawing:drawingCloud});
     toast('☁️ 特徵點已儲存至雲端');
   }catch(e){
-    toast('💾 特徵點已存本機（雲端同步失敗）',true);
+    toast('⚠️ 雲端同步失敗，其他裝置看不到此更新',true);
     console.warn('feats cloud sync failed:',e.message);
   }
 }
@@ -2846,14 +2864,13 @@ async function closeFeatModal(){
   if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
   const fk=featKey;
   const arr=Array.isArray(F[fk])?[...F[fk]]:[];
-  const drawing=getDraw(fk).drawing||'';
-  // Save to localStorage before closing
+  const {drawing:_d2,drawings:_drs2}=getDraw(fk);
+  const drawingCloud2=_drs2.length>1?JSON.stringify(_drs2):(_d2||'');
   F[fk]=arr;
   lss(SK.F,F);
   closeModal('featModal');
   renderParts();
-  // Sync to cloud silently
-  api('POST','/feats',{key:fk,feats:arr,drawing}).catch(e=>console.warn('feats cloud sync:',e.message));
+  api('POST','/feats',{key:fk,feats:arr,drawing:drawingCloud2}).catch(e=>console.warn('feats cloud sync:',e.message));
 }
 // Field schema per measurement type
 const FEAT_FIELD_MAP={
@@ -3595,11 +3612,11 @@ function compressImage(file, cb){
   fr.onload=function(e){
     const img=new Image();
     img.onload=function(){
-      let w=img.width,h=img.height;const max=1200;
+      let w=img.width,h=img.height;const max=800;
       if(w>max||h>max){const r=Math.min(max/w,max/h);w=Math.round(w*r);h=Math.round(h*r);}
       const cv=document.createElement('canvas');cv.width=w;cv.height=h;
       cv.getContext('2d').drawImage(img,0,0,w,h);
-      try{cb(cv.toDataURL('image/jpeg',0.7));}catch(err){cb(e.target.result);}
+      try{cb(cv.toDataURL('image/jpeg',0.55));}catch(err){cb(e.target.result);}
     };
     img.onerror=function(){cb(e.target.result);};
     img.src=e.target.result;
@@ -5162,6 +5179,10 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   // 每分鐘更新通知徽章
   setInterval(updateNotifBadge, 60000);
+  // Auto-sync from cloud every 90 seconds for multi-device consistency
+  setInterval(function(){
+    apiLoadAll(true);  // silent=true: no toast, no skeleton
+  }, 90000);
 });
 </script>
 </body>
