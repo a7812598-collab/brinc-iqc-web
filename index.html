@@ -326,7 +326,10 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
   <!-- KPI Row 1: IQC -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding-left:2px;">
     <span style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);font-weight:600;">🔍 IQC 抽檢</span>
-    <button class="btn btn-primary btn-sm" onclick="openReportModal()" style="display:flex;align-items:center;gap:5px;">📋 產生本週品質周報</button>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost btn-sm" onclick="showWeeklyAbnormal()" style="display:flex;align-items:center;gap:5px;">⚠️ 上週異常概覽</button>
+      <button class="btn btn-primary btn-sm" onclick="openReportModal()" style="display:flex;align-items:center;gap:5px;">📋 產生本週品質周報</button>
+    </div>
   </div>
   <div class="kpi-row" id="kpiRow"></div>
   <!-- KPI Row 2: NPI + SQE + GS -->
@@ -556,7 +559,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
       <div class="form-group"><label>合格率門檻</label><input class="fi" type="number" id="p_rate" value="0.95" min="0" max="1" step="0.01"></div>
       <div class="form-group" style="grid-column:span 2"><label>備註</label><input class="fi" id="p_note"></div>
     </div>
-    <div class="form-actions"><button class="btn btn-primary" onclick="addPart()">+ 新增料號</button></div>
+    <div class="form-actions"><button class="btn btn-primary" id="addPartBtn" onclick="addPart()">+ 新增料號</button></div>
     <div class="filter-row"><input class="fi" id="partsFilter" placeholder="搜尋供應商或料號…" oninput="renderParts()"></div>
     <div class="table-wrap">
       <table>
@@ -1065,7 +1068,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
 </div>
 
 <!-- MODAL: Drawing Viewer -->
-<div class="modal-overlay" id="drawingModal">
+<div class="modal-overlay" id="drawingModal" style="z-index:1000;">
   <div class="modal md">
     <div class="modal-hdr"><div class="modal-title">📐 Drawing 預覽</div><button class="modal-close" onclick="closeModal('drawingModal')">✕</button></div>
     <div class="modal-body" style="text-align:center;padding:12px"><img id="drawingImg" class="drawing-full"></div>
@@ -1507,7 +1510,7 @@ const API_KEY  = '255hf7LaWXm0QIn-wE7U4MH8_-MScT9Vhiq7Z_BnJr8iAzFu-6hxbg==';
 let currentUser=null;
 const ROLE_PAGES={
   admin:['dashboard','history','eval','npi','sqe','trend','health','gs','import','add','parts','guide','users'],
-  iqc:['dashboard','history','add','parts','gs','guide'],
+  iqc:['dashboard','history','add','parts','gs','npi','guide'],
   guest:['dashboard','trend','health','guide']
 };
 function doLogin(){
@@ -2637,11 +2640,37 @@ function renderParts(){
       <td>${fc>0?`<span class="tag tag-pass">${fc} 點</span>`:'<span style="color:var(--text3)">未設定</span>'}${hasDrawing?' <span class="tag tag-exempt">📐</span>':''}</td>
       <td style="color:var(--text3);font-size:12px">${p.note||''}</td>
       <td style="display:flex;gap:3px;">
-        <button class="icon-btn edit" onclick="openFeatModal('${esc(p.sup)}','${esc(p.part)}')">⚙️</button>
-        <button class="icon-btn del" onclick="delPart(${p.id})">✕</button>
+        <button class="icon-btn edit" onclick="editPart(${p.id})" title="編輯">✏️</button>
+        <button class="icon-btn edit" onclick="openFeatModal('${esc(p.sup)}','${esc(p.part)}')" title="特徵點">⚙️</button>
+        <button class="icon-btn del" onclick="delPart(${p.id})" title="刪除">✕</button>
       </td>
     </tr>`;
   }).join('');
+}
+let editingPartId=null;
+function editPart(id){
+  const p=P.find(x=>x.id===id);if(!p)return;
+  editingPartId=id;
+  document.getElementById('p_sup').value=p.sup||'';
+  document.getElementById('p_code').value=p.code||'';
+  document.getElementById('p_part').value=p.part||'';
+  document.getElementById('p_craft').value=p.craft||'';
+  document.getElementById('p_consec').value=p.consec||10;
+  document.getElementById('p_rate').value=p.rate||0.95;
+  document.getElementById('p_note').value=p.note||'';
+  const btn=document.getElementById('addPartBtn');
+  if(btn)btn.textContent='✓ 更新料號';
+  let cancel=document.getElementById('cancelEditPartBtn');
+  if(!cancel&&btn){cancel=document.createElement('button');cancel.id='cancelEditPartBtn';cancel.className='btn btn-ghost';cancel.style.marginLeft='8px';cancel.textContent='取消';cancel.onclick=cancelEditPart;btn.parentNode.insertBefore(cancel,btn.nextSibling);}
+  document.getElementById('p_sup').scrollIntoView({behavior:'smooth',block:'center'});
+  toast('編輯模式：修改後按「更新料號」');
+}
+function cancelEditPart(){
+  editingPartId=null;
+  ['p_sup','p_code','p_part','p_craft','p_note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p_consec').value='10';document.getElementById('p_rate').value='0.95';
+  const btn=document.getElementById('addPartBtn');if(btn)btn.textContent='+ 新增料號';
+  const cancel=document.getElementById('cancelEditPartBtn');if(cancel)cancel.remove();
 }
 async function addPart(){
   const sup=document.getElementById('p_sup').value.trim(),code=document.getElementById('p_code').value.trim();
@@ -2649,6 +2678,22 @@ async function addPart(){
   const consec=parseInt(document.getElementById('p_consec').value)||10,rate=parseFloat(document.getElementById('p_rate').value)||.95;
   const note=document.getElementById('p_note').value.trim();
   if(!sup||!code||!part||!craft){toast('請填寫供應商、代碼、料號、工藝',true);return;}
+  // 編輯模式 → 更新
+  if(editingPartId){
+    const old=P.find(x=>x.id===editingPartId);
+    const oldFk=old?old.sup+'||'+old.part:null;
+    try{
+      await api('PUT','/parts/'+editingPartId,{sup,code,part,craft,consec,rate,note});
+      // 若供應商或料號改變,同步搬移特徵點 key
+      const newFk=sup+'||'+part;
+      if(oldFk&&oldFk!==newFk&&F[oldFk]){F[newFk]=F[oldFk];delete F[oldFk];}
+      Object.assign(old,{sup,code,part,craft,consec,rate,note});
+      renderParts();refreshSups();toast('☁️ 料號已更新');
+      cancelEditPart();
+    }catch(e){toast('更新失敗：'+e.message,true);}
+    return;
+  }
+  // 新增
   try{
     const resp=await api('POST','/parts',{sup,code,part,craft,consec,rate,note});
     P.push({id:resp.id||nid(P),sup,code,part,craft,consec,rate,note});
@@ -2673,26 +2718,31 @@ function saveFeatsToCloud(fk){
   api('POST','/feats',{key:fk,feats:arr,drawing}).catch(e=>console.error('特徵點同步失敗:',e.message));
 }
 // 明確儲存特徵點(確保最後編輯也存到)+ 關閉
-async function saveFeatsAndClose(){
+function saveFeatsAndClose(){
+  if(typeof closeLightbox==='function')closeLightbox();
+  var _dm=document.getElementById('drawingModal');if(_dm)_dm.classList.remove('open');
   if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
   const fk=featKey;
   const arr=Array.isArray(F[fk])?F[fk]:[];
   const drawing=(F[fk]&&F[fk]._drawing)||'';
-  try{
-    await api('POST','/feats',{key:fk,feats:arr,drawing});
-    toast('☁️ 特徵點已儲存');
-  }catch(e){toast('儲存失敗：'+e.message,true);return;}
+  toast('☁️ 特徵點已儲存');
   renderParts();closeModal('featModal');
+  api('POST','/feats',{key:fk,feats:arr,drawing}).catch(function(e){
+    toast('特徵點雲端儲存失敗，請重新編輯：'+e.message,true);
+  });
 }
 // 關閉前也確保儲存(避免最後一格未失焦遺漏)
 async function closeFeatModal(){
+  if(typeof closeLightbox==='function')closeLightbox();
+  var _dm2=document.getElementById('drawingModal');if(_dm2)_dm2.classList.remove('open');
   if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
   const fk=featKey;
   const arr=Array.isArray(F[fk])?F[fk]:[];
   const drawing=(F[fk]&&F[fk]._drawing)||'';
-  try{await api('POST','/feats',{key:fk,feats:arr,drawing});}
-  catch(e){toast('特徵點儲存失敗，請再按一次儲存：'+e.message,true);return;}
-  renderParts();closeModal('featModal');
+  closeModal('featModal');
+  api('POST','/feats',{key:fk,feats:arr,drawing})
+    .then(()=>renderParts())
+    .catch(e=>toast('特徵點儲存失敗，請重新開啟編輯：'+e.message,true));
 }
 // Field schema per measurement type
 const FEAT_FIELD_MAP={
@@ -2749,14 +2799,12 @@ function renderFeatModal(){
 }
 function uploadDrawing(inp){
   const file=inp.files[0];if(!file)return;
-  const fr=new FileReader();
-  fr.onload=e=>{
+  compressImage(file, function(data){
     if(!F[featKey])F[featKey]=[];
     if(!Array.isArray(F[featKey]))F[featKey]=[];
-    F[featKey]._drawing=e.target.result;
+    F[featKey]._drawing=data;
     renderFeatModal();renderParts();toast('Drawing 已加入，記得按「儲存特徵點」');
-  };
-  fr.readAsDataURL(file);
+  });
 }
 function removeDrawing(){
   if(F[featKey])F[featKey]._drawing='';
@@ -2764,7 +2812,7 @@ function removeDrawing(){
 }
 function viewDrawing(key){
   const raw=F[key];const d=(raw&&raw._drawing)||'';if(!d)return;
-  document.getElementById('drawingImg').src=d;openModal('drawingModal');
+  viewImgSrc(d);
 }
 function updFeat(i,k,v){
   if(!F[featKey])F[featKey]=[];
@@ -3376,7 +3424,35 @@ function openGsDetail(id){
     </div>`;
   openModal('gsDetailModal');
 }
-function viewImgSrc(src){document.getElementById('drawingImg').src=src;openModal('drawingModal');}
+function closeLightbox(){const lb=document.getElementById('_lightbox');if(lb)lb.remove();document.removeEventListener('keydown',_lbEsc);}
+function _lbEsc(e){if(e.key==='Escape')closeLightbox();}
+function viewImgSrc(src){
+  closeLightbox();
+  const lb=document.createElement('div');
+  lb.id='_lightbox';
+  lb.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
+  lb.innerHTML='<img src="'+src+'" style="max-width:90%;max-height:90%;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.5);"><div style="position:absolute;top:20px;right:28px;color:#fff;font-size:34px;cursor:pointer;line-height:1;">×</div>';
+  lb.onclick=function(){closeLightbox();};
+  document.body.appendChild(lb);
+  document.addEventListener('keydown',_lbEsc);
+}
+
+function compressImage(file, cb){
+  const fr=new FileReader();
+  fr.onload=function(e){
+    const img=new Image();
+    img.onload=function(){
+      let w=img.width,h=img.height;const max=1200;
+      if(w>max||h>max){const r=Math.min(max/w,max/h);w=Math.round(w*r);h=Math.round(h*r);}
+      const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      try{cb(cv.toDataURL('image/jpeg',0.7));}catch(err){cb(e.target.result);}
+    };
+    img.onerror=function(){cb(e.target.result);};
+    img.src=e.target.result;
+  };
+  fr.readAsDataURL(file);
+}
 function editGsFromDetail(){closeModal('gsDetailModal');editGs(gsEditId);}
 
 function openGsAddModal(){
@@ -3404,14 +3480,13 @@ function editGs(id){
   openModal('gsModal');
 }
 function previewGsPhotos(inp){
-  Array.from(inp.files).forEach(file=>{
-    const fr=new FileReader();
-    fr.onload=e=>{
-      gsPhotoData.push(e.target.result);
-      document.getElementById('gsPhotoPreview').innerHTML=gsPhotoData.map(p=>`<img src="${p}" style="width:46px;height:46px;border-radius:5px;object-fit:cover;border:1px solid var(--border);">`).join('');
-    };
-    fr.readAsDataURL(file);
+  Array.from(inp.files).forEach(function(file){
+    compressImage(file, function(data){
+      gsPhotoData.push(data);
+      document.getElementById('gsPhotoPreview').innerHTML=gsPhotoData.map(function(p){return '<img src="'+p+'" style="width:46px;height:46px;border-radius:5px;object-fit:cover;border:1px solid var(--border);">';}).join('');
+    });
   });
+  inp.value='';
 }
 async function saveGs(){
   const gsId=document.getElementById('gs_id').value.trim();
@@ -3534,12 +3609,10 @@ async function delLoan(id){
 // ═══════════════════════════════════════════════════
 function loadPhoto(inp, previewBodyId, dataId){
   const file=inp.files[0];if(!file)return;
-  const fr=new FileReader();
-  fr.onload=e=>{
-    document.getElementById(dataId).value=e.target.result;
-    renderPhotoBody(previewBodyId, e.target.result);
-  };
-  fr.readAsDataURL(file);
+  compressImage(file, function(data){
+    document.getElementById(dataId).value=data;
+    renderPhotoBody(previewBodyId, data);
+  });
   inp.value='';
 }
 function renderPhotoBody(bodyId, src){
@@ -3631,29 +3704,30 @@ function openD8PhotoCompare(id){
   showPhotoCompareModal(`8D ${d.no} — ${d.sup}`, d.ngPhoto, d.okPhoto, d.title);
 }
 function showPhotoCompareModal(title, ngSrc, okSrc, desc){
-  document.getElementById('drawingImg').style.display='none';
-  const modal=document.getElementById('drawingModal');
-  modal.querySelector('.modal-title').textContent=`📷 ${title}`;
-  modal.querySelector('.modal-body').innerHTML=`
-    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">${esc(desc||'')}</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <div class="photo-slot">
-        <div class="photo-slot-hdr ng">❌ NG 照片（問題現象）</div>
-        <div class="photo-slot-body" id="_cmp_ng">
-          ${ngSrc?'<img class="photo-thumb" style="cursor:pointer">':`<span style="font-size:12px;color:var(--text3)">未上傳</span>`}
-        </div>
-      </div>
-      <div class="photo-slot">
-        <div class="photo-slot-hdr ok">✅ OK 照片（改善確認）</div>
-        <div class="photo-slot-body" id="_cmp_ok">
-          ${okSrc?'<img class="photo-thumb" style="cursor:pointer">':`<span style="font-size:12px;color:var(--text3)">未上傳</span>`}
-        </div>
-      </div>
-    </div>`;
-  // Assign src and onclick after DOM is created (avoids base64-in-attribute issue)
-  if(ngSrc){const img=modal.querySelector('#_cmp_ng img');if(img){img.src=ngSrc;img.onclick=()=>viewImgSrc(ngSrc);}}
-  if(okSrc){const img=modal.querySelector('#_cmp_ok img');if(img){img.src=okSrc;img.onclick=()=>viewImgSrc(okSrc);}}
-  openModal('drawingModal');
+  if(typeof closeLightbox==='function')closeLightbox();
+  const old=document.getElementById('_cmpModal');if(old)old.remove();
+  const m=document.createElement('div');
+  m.id='_cmpModal';
+  m.style.cssText='position:fixed;inset:0;z-index:1000;background:rgba(30,42,74,.55);display:flex;align-items:center;justify-content:center;padding:20px;';
+  const box=document.createElement('div');
+  box.style.cssText='background:#fff;border-radius:14px;max-width:760px;width:100%;max-height:90vh;overflow:auto;padding:20px;box-sizing:border-box;';
+  box.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-weight:700;font-size:16px;color:#0f172a;">\ud83d\udcf7 '+title+'</div><button id="_cmpClose" style="border:none;background:#eee;border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:16px;">\u2715</button></div>'
+    +'<div style="font-size:12px;color:#475569;margin-bottom:12px;">'+(desc||'')+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
+    +'<div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;"><div style="background:#fff5f5;color:#dc2626;padding:8px;font-size:12px;font-weight:700;">\u274c NG \u7167\u7247</div><div style="padding:10px;text-align:center;min-height:80px;display:flex;align-items:center;justify-content:center;" id="_cmpNg"></div></div>'
+    +'<div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;"><div style="background:#f0fdf4;color:#059669;padding:8px;font-size:12px;font-weight:700;">\u2705 OK \u7167\u7247</div><div style="padding:10px;text-align:center;min-height:80px;display:flex;align-items:center;justify-content:center;" id="_cmpOk"></div></div>'
+    +'</div>';
+  m.appendChild(box);
+  m.onclick=function(e){if(e.target===m)m.remove();};
+  document.body.appendChild(m);
+  box.querySelector('#_cmpClose').onclick=function(){m.remove();};
+  function fill(slotId,src){
+    const slot=box.querySelector(slotId);
+    if(src){const img=document.createElement('img');img.src=src;img.style.cssText='max-width:100%;max-height:40vh;border-radius:6px;cursor:zoom-in;';img.onclick=function(){viewImgSrc(src);};slot.appendChild(img);}
+    else{slot.innerHTML='<span style="font-size:12px;color:#94a3b8;">\u672a\u4e0a\u50b3</span>';}
+  }
+  fill('#_cmpNg',ngSrc);
+  fill('#_cmpOk',okSrc);
 }
 
 // ── CAR ──
@@ -3697,6 +3771,48 @@ function renderCar(){
   document.getElementById('carPag').innerHTML=pg+`<span class="pg-info">${start+1}–${Math.min(start+PAGE,data.length)} / ${data.length}</span>`;
 }
 function carGo(p){carPage=p;renderCar();}
+function showWeeklyAbnormal(){
+  const now=new Date();
+  const wa=new Date(now.getTime()-7*86400000).toISOString().slice(0,10);
+  const td=now.toISOString().slice(0,10);
+  const cars=(CAR_DATA||[]).filter(function(d){return d.out&&d.out>=wa&&d.out<=td;}).sort(function(a,b){return (b.out||'').localeCompare(a.out||'');});
+  const d8s=(D8_DATA||[]).filter(function(d){return d.open&&d.open>=wa&&d.open<=td;}).sort(function(a,b){return (b.open||'').localeCompare(a.open||'');});
+  function stTag(s){
+    var col=s&&(s.indexOf('\u95dc\u9589')>=0||s.indexOf('\u5df2\u56de\u8986')>=0)?'#059669':(s&&s.indexOf('\u903e\u671f')>=0?'#dc2626':'#f59e0b');
+    return '<span style="display:inline-block;padding:2px 10px;border-radius:11px;background:'+col+';color:#fff;font-size:11px;">'+esc(s||'-')+'</span>';
+  }
+  function rowsOf(arr,descF){
+    if(!arr.length)return '<div style="text-align:center;color:#94a3b8;padding:20px;font-size:13px;">\u672c\u9031\u7121\u8a18\u9304</div>';
+    return arr.map(function(d){
+      var photos='';
+      if(d.ngPhoto)photos+='<img src="'+d.ngPhoto+'" title="NG" style="width:46px;height:46px;border-radius:5px;object-fit:cover;border:2px solid #fecaca;cursor:zoom-in;margin-right:6px;" onclick="event.stopPropagation();viewImgSrc(this.src)">';
+      if(d.okPhoto)photos+='<img src="'+d.okPhoto+'" title="OK" style="width:46px;height:46px;border-radius:5px;object-fit:cover;border:2px solid #bbf7d0;cursor:zoom-in;" onclick="event.stopPropagation();viewImgSrc(this.src)">';
+      return '<div style="padding:12px;border-bottom:1px solid #f1f5f9;">'
+        +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
+          +'<div style="font-weight:700;color:#0f172a;min-width:120px;">'+esc(d.no||'')+'</div>'
+          +'<div style="flex:1;font-size:13px;color:#475569;">'+esc(d.sup||'')+'</div>'
+          +stTag(d.status)+'</div>'
+        +'<div style="font-size:12.5px;color:#334155;margin-bottom:'+(photos?'8px':'0')+';line-height:1.5;">'+esc(d[descF]||'\uff08\u7121\u8aaa\u660e\uff09')+'</div>'
+        +(photos?'<div style="display:flex;">'+photos+'</div>':'')+'</div>';
+    }).join('');
+  }
+  const old=document.getElementById('_weekAbModal');if(old)old.remove();
+  const mm=document.createElement('div');
+  mm.id='_weekAbModal';
+  mm.style.cssText='position:fixed;inset:0;z-index:1100;background:rgba(30,42,74,.55);display:flex;align-items:center;justify-content:center;padding:20px;';
+  const box=document.createElement('div');
+  box.style.cssText='background:#fff;border-radius:14px;max-width:680px;width:100%;max-height:85vh;overflow:auto;padding:22px;box-sizing:border-box;';
+  box.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-weight:700;font-size:17px;color:#0f172a;">\u26a0\ufe0f \u4e0a\u9031\u7570\u5e38\u6982\u89bd</div><button id="_waClose" style="border:none;background:#eee;border-radius:6px;width:30px;height:30px;cursor:pointer;">\u2715</button></div>'
+    +'<div style="font-size:12px;color:#94a3b8;margin-bottom:16px;">'+wa+' \u81f3 '+td+'</div>'
+    +'<div style="font-weight:700;color:#0e7490;font-size:14px;margin-bottom:6px;">\ud83d\udce8 CAR\uff08'+cars.length+'\uff09</div>'
+    +'<div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:18px;">'+rowsOf(cars,'desc')+'</div>'
+    +'<div style="font-weight:700;color:#0e7490;font-size:14px;margin-bottom:6px;">\ud83d\udcdd 8D\uff08'+d8s.length+'\uff09</div>'
+    +'<div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">'+rowsOf(d8s,'title')+'</div>';
+  mm.appendChild(box);
+  mm.onclick=function(e){if(e.target===mm)mm.remove();};
+  document.body.appendChild(mm);
+  box.querySelector('#_waClose').onclick=function(){mm.remove();};
+}
 function openCarModal(prefill){
   carEditId=null;
   document.getElementById('carModalTitle').textContent='📨 發出 CAR';
