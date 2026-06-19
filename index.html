@@ -1054,6 +1054,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
     <div class="modal-body" id="measBody"></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('measModal')">關閉</button>
+      <button class="btn btn-ghost" onclick="exportMeasReport()" style="border-color:#0891b2;color:#0891b2;">📄 匯出報告 PDF</button>
       <button class="btn btn-primary" onclick="saveMeas()">✓ 儲存量測</button>
     </div>
   </div>
@@ -2512,6 +2513,265 @@ function measAddFeat(cid){
 function measRemFeat(cid,si,fi){
   const st=getMeasState(cid);st.samples[si].features.splice(fi,1);renderMeasBody(cid,st,true);
 }
+
+// ═══════════════════════════════════════════════════════════════
+// PDF MEASUREMENT REPORT EXPORT
+// ═══════════════════════════════════════════════════════════════
+function exportMeasReport(){
+  var id=measId;
+  var rec=H.find(function(r){return r.id===id;});
+  if(!rec){toast('找不到 IQC 記錄',true);return;}
+  var meas=M[id];
+  if(!meas||!meas.samples||!meas.samples.length){toast('尚無量測資料，請先儲存量測',true);return;}
+
+  var fk=rec.sup+'||'+rec.part;
+  var raw=F[fk];
+  var drawings=(raw&&Array.isArray(raw._drawings)&&raw._drawings.length)?raw._drawings:(raw&&raw._drawing?[raw._drawing]:[]);
+  var partInfo=P.find(function(p){return p.sup===rec.sup&&p.part===rec.part;})||{};
+  var samples=meas.samples;
+  var featNames=[];
+  samples.forEach(function(s){s.features.forEach(function(f){if(featNames.indexOf(f.name)<0)featNames.push(f.name);});});
+
+  function calcFS(fname){
+    var vals=[],ng=0,ok=0;
+    var f0=null;
+    samples.forEach(function(s){
+      var f=s.features.find(function(x){return x.name===fname;});
+      if(!f0&&f)f0=f;
+      if(!f||f.value===''||f.value===undefined)return;
+      if(calcValClass(f.lsl,f.usl,f.value)==='val-ng')ng++;else ok++;
+      var v=parseFloat(f.value);if(!isNaN(v))vals.push(v);
+    });
+    f0=f0||{};
+    var cpkStr='—';
+    if(vals.length>=4&&(f0.lsl||f0.usl)){
+      var cpk=calcCpk(vals,f0.lsl?parseFloat(f0.lsl):null,f0.usl?parseFloat(f0.usl):null);
+      if(cpk!==null)cpkStr=cpk.toFixed(2);
+    }
+    return{ok:ok,ng:ng,total:ok+ng,cpkStr:cpkStr,f0:f0||{}};
+  }
+
+  var totalNG=0,totalOK=0;
+  featNames.forEach(function(n){var s=calcFS(n);totalOK+=s.ok;totalNG+=s.ng;});
+  var totalPts=totalOK+totalNG;
+  var passRate=totalPts>0?(totalOK/totalPts*100).toFixed(1):'—';
+
+  function vBg(f,v){if(v===''||v===undefined)return'#f5f5f5';return calcValClass(f.lsl,f.usl,v)==='val-ng'?'#fee2e2':'#d1fae5';}
+  function vIcon(f,v){if(v===''||v===undefined)return'';return calcValClass(f.lsl,f.usl,v)==='val-ng'?'&#10007;':'&#10003;';}
+  function vC(f,v){if(v===''||v===undefined)return'#999';return calcValClass(f.lsl,f.usl,v)==='val-ng'?'#dc2626':'#059669';}
+
+  var now=new Date();
+  var nowStr=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0');
+  var reportNo='IQC-RPT-'+id+'-'+now.getFullYear()+(now.getMonth()+1).toString().padStart(2,'0');
+  var company=(document.querySelector('.logo-text')||{}).childNodes;
+  var companyName=company&&company[0]?company[0].textContent:'Solution Consultant Company';
+  var resultColor=rec.result==='合格'?'#059669':'#dc2626';
+  var resultBg=rec.result==='合格'?'#d1fae5':'#fee2e2';
+
+  // Pivot table header
+  var th='<th style="width:28px;text-align:center;background:#1e3a5f;color:#fff;font-size:10px;padding:5px 3px;">#</th>';
+  th+='<th style="background:#1e3a5f;color:#fff;font-size:10px;padding:5px 6px;min-width:80px;">特徵點</th>';
+  th+='<th style="width:36px;text-align:center;background:#1e3a5f;color:#fff;font-size:10px;">LSL</th>';
+  th+='<th style="width:36px;text-align:center;background:#1e3a5f;color:#fff;font-size:10px;">USL</th>';
+  th+='<th style="width:26px;text-align:center;background:#1e3a5f;color:#fff;font-size:10px;">單位</th>';
+  samples.forEach(function(s){th+='<th style="width:34px;text-align:center;background:#1e3a5f;color:#fff;font-size:10px;padding:5px 2px;">#'+s.sampleNo+'</th>';});
+  th+='<th style="width:38px;text-align:center;background:#1e3a5f;color:#fff;font-size:10px;">Cpk</th>';
+  th+='<th style="width:48px;text-align:center;background:#1e3a5f;color:#fff;font-size:10px;">合格率</th>';
+
+  var tb='';
+  featNames.forEach(function(fname,fi){
+    var st=calcFS(fname);var f0=st.f0;
+    var rowBg=fi%2===0?'#fff':'#f8fafc';
+    var row='<tr style="background:'+rowBg+';">';
+    row+='<td style="text-align:center;color:#94a3b8;font-size:10px;padding:5px 3px;">'+(fi+1)+'</td>';
+    row+='<td style="font-size:11px;font-weight:600;color:#1e293b;padding:5px 6px;">'+fname+'<br><span style="font-size:9px;color:#94a3b8;font-weight:400;">'+(f0.type||'')+''+(f0.equip?' | '+f0.equip:'')+'</span></td>';
+    row+='<td style="text-align:center;font-size:10px;color:#475569;">'+(f0.lsl||'—')+'</td>';
+    row+='<td style="text-align:center;font-size:10px;color:#475569;">'+(f0.usl||'—')+'</td>';
+    row+='<td style="text-align:center;font-size:10px;color:#475569;">'+(f0.unit||'—')+'</td>';
+    samples.forEach(function(s){
+      var f=s.features.find(function(x){return x.name===fname;})||{value:'',lsl:f0.lsl,usl:f0.usl};
+      var bg=f.value!==''&&f.value!==undefined?vBg(f,f.value):'#f5f5f5';
+      row+='<td style="text-align:center;background:'+bg+';font-size:11px;font-weight:700;padding:4px 2px;">';
+      row+='<span style="display:block;">'+(f.value||'—')+'</span>';
+      row+='<span style="font-size:9px;color:'+vC(f,f.value)+';">'+vIcon(f,f.value)+'</span></td>';
+    });
+    var cpkNum=st.cpkStr!=='—'?parseFloat(st.cpkStr):null;
+    var cpkC=cpkNum!==null?(cpkNum>=1.33?'#059669':cpkNum>=1.0?'#d97706':'#dc2626'):'#94a3b8';
+    var fpct=st.total>0?(st.ok/st.total*100).toFixed(0)+'%':'—';
+    var fpC=st.ng>0?'#dc2626':'#059669';
+    row+='<td style="text-align:center;font-size:10px;font-weight:700;color:'+cpkC+';">'+st.cpkStr+'</td>';
+    row+='<td style="text-align:center;font-size:10px;font-weight:700;color:'+fpC+';">'+fpct+'</td>';
+    row+='</tr>';
+    tb+=row;
+  });
+
+  var drawHtml='';
+  if(drawings.length){
+    var maxImgW=drawings.length===1?'320px':'200px';
+    var maxImgH=drawings.length===1?'260px':'150px';
+    drawHtml='<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;">';
+    drawings.forEach(function(d,i){
+      drawHtml+='<div style="text-align:center;"><img src="'+d+'" style="max-width:'+maxImgW+';max-height:'+maxImgH+';border:1px solid #e2e8f0;border-radius:4px;object-fit:contain;display:block;"/><div style="font-size:9px;color:#94a3b8;margin-top:3px;">工程圖 '+(i+1)+'</div></div>';
+    });
+    drawHtml+='</div>';
+  }
+
+  var noteHtml=rec.note?'<div style="margin-top:8px;padding:7px 10px;background:#fef9c3;border-left:3px solid #f59e0b;font-size:11px;"><b>備註：</b>'+rec.note+'</div>':'';
+
+  // Combined table header
+  var thCols='';
+  thCols+='<th style="width:22px;text-align:center;background:#1e3a5f;color:#fff;font-size:9px;padding:5px 2px;">#</th>';
+  thCols+='<th style="background:#1e3a5f;color:#fff;font-size:9px;padding:5px 6px;min-width:70px;">特徵點</th>';
+  thCols+='<th style="width:32px;text-align:center;background:#1e3a5f;color:#fff;font-size:9px;">LSL</th>';
+  thCols+='<th style="width:32px;text-align:center;background:#1e3a5f;color:#fff;font-size:9px;">USL</th>';
+  thCols+='<th style="width:22px;text-align:center;background:#1e3a5f;color:#fff;font-size:9px;">單位</th>';
+  samples.forEach(function(s){
+    thCols+='<th style="width:32px;text-align:center;background:#2c4a7c;color:#fff;font-size:9px;padding:5px 2px;">#'+s.sampleNo+'</th>';
+  });
+  thCols+='<th style="width:42px;text-align:center;background:#1d4ed8;color:#fff;font-size:9px;padding:4px 2px;">Mean<br>平均</th>';
+  thCols+='<th style="width:42px;text-align:center;background:#6d28d9;color:#fff;font-size:9px;padding:4px 2px;">3&#963;<br>標準差</th>';
+  thCols+='<th style="width:42px;text-align:center;background:#065f46;color:#fff;font-size:9px;padding:4px 2px;">MAX<br>最大值</th>';
+  thCols+='<th style="width:42px;text-align:center;background:#991b1b;color:#fff;font-size:9px;padding:4px 2px;">MIN<br>最小值</th>';
+  thCols+='<th style="width:38px;text-align:center;background:#92400e;color:#fff;font-size:9px;padding:4px 2px;">R<br>範圍</th>';
+  thCols+='<th style="width:36px;text-align:center;background:#1e3a5f;color:#fff;font-size:9px;">Cpk</th>';
+  thCols+='<th style="width:42px;text-align:center;background:#1e3a5f;color:#fff;font-size:9px;">合格率</th>';
+
+  var tbRows='';
+  featNames.forEach(function(fname,fi){
+    var st=calcFS(fname);var f0=st.f0;
+    var vals=[];
+    samples.forEach(function(s){
+      var f=s.features.find(function(x){return x.name===fname;});
+      if(f&&f.value!==''&&f.value!==undefined){var v=parseFloat(f.value);if(!isNaN(v))vals.push(v);}
+    });
+    var meanV='—',sig3='—',maxV='—',minV='—',rngV='—';
+    if(vals.length){
+      var avg=vals.reduce(function(a,b){return a+b;},0)/vals.length;
+      meanV=avg.toFixed(3);
+      maxV=Math.max.apply(null,vals).toFixed(3);
+      minV=Math.min.apply(null,vals).toFixed(3);
+      rngV=(parseFloat(maxV)-parseFloat(minV)).toFixed(3);
+      if(vals.length>=2){
+        var va=vals.reduce(function(a,v){return a+(v-avg)*(v-avg);},0)/(vals.length-1);
+        sig3=(3*Math.sqrt(va)).toFixed(3);
+      }
+    }
+    var cpkNum=st.cpkStr!=='—'?parseFloat(st.cpkStr):null;
+    var cpkC=cpkNum!==null?(cpkNum>=1.33?'#059669':cpkNum>=1.0?'#d97706':'#dc2626'):'#94a3b8';
+    var fpct=st.total>0?(st.ok/st.total*100).toFixed(0)+'%':'—';
+    var fpC=st.ng>0?'#dc2626':'#059669';
+    var rowBg=fi%2===0?'#fff':'#f8fafc';
+    var row='<tr style="background:'+rowBg+';">';
+    row+='<td style="text-align:center;color:#94a3b8;font-size:9px;padding:4px 2px;">'+(fi+1)+'</td>';
+    row+='<td style="font-size:10px;font-weight:600;color:#1e293b;padding:4px 6px;">'+fname+'<br><span style="font-size:8px;color:#94a3b8;font-weight:400;">'+(f0.type||'')+(f0.equip?' | '+f0.equip:'')+'</span></td>';
+    row+='<td style="text-align:center;font-size:9px;color:#475569;">'+(f0.lsl||'—')+'</td>';
+    row+='<td style="text-align:center;font-size:9px;color:#475569;">'+(f0.usl||'—')+'</td>';
+    row+='<td style="text-align:center;font-size:9px;color:#475569;">'+(f0.unit||'—')+'</td>';
+    samples.forEach(function(s){
+      var f=s.features.find(function(x){return x.name===fname;})||{value:'',lsl:f0.lsl,usl:f0.usl};
+      var haVal=f.value!==''&&f.value!==undefined;
+      var isNG=haVal&&vIcon(f,f.value)==='✗';
+      var tc=isNG?'#dc2626':'#1e293b';
+      row+='<td style="text-align:center;padding:4px 2px;background:'+rowBg+';">';
+      row+='<span style="font-size:10px;font-weight:'+(isNG?'700':'400')+';color:'+tc+';">'+(haVal?f.value:'—')+'</span></td>';
+    });
+    row+='<td style="text-align:center;font-size:10px;color:#374151;background:'+rowBg+';">'+meanV+'</td>';
+    row+='<td style="text-align:center;font-size:10px;color:#374151;background:'+rowBg+';">'+sig3+'</td>';
+    row+='<td style="text-align:center;font-size:10px;color:#374151;background:'+rowBg+';">'+maxV+'</td>';
+    row+='<td style="text-align:center;font-size:10px;color:#374151;background:'+rowBg+';">'+minV+'</td>';
+    row+='<td style="text-align:center;font-size:10px;color:#374151;background:'+rowBg+';">'+rngV+'</td>';
+    row+='<td style="text-align:center;font-size:10px;font-weight:700;color:'+cpkC+';">'+st.cpkStr+'</td>';
+    row+='<td style="text-align:center;font-size:10px;font-weight:700;color:'+fpC+';">'+fpct+'</td>';
+    row+='</tr>';
+    tbRows+=row;
+  });
+
+  // CSS
+  var html='<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>量測報告 '+reportNo+'</title><style>';
+  html+='*{margin:0;padding:0;box-sizing:border-box;}body{font-family:"Segoe UI","Noto Sans TC",Arial,sans-serif;font-size:12px;color:#1e293b;background:#fff;}';
+  html+='@page{size:A4 landscape;margin:12mm 10mm 12mm 10mm;}';
+  html+='@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}.no-print{display:none!important;}}';
+  html+='.wrap{max-width:1020px;margin:0 auto;}';
+  html+='.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 16px;background:#1e3a5f;color:#fff;border-radius:6px 6px 0 0;margin-bottom:10px;}';
+  html+='.hdr .co{font-size:14px;font-weight:800;}.hdr .co span{display:block;font-size:9px;font-weight:400;opacity:.7;letter-spacing:.8px;margin-top:2px;}';
+  html+='.hdr .ti{text-align:right;}.hdr .ti h1{font-size:15px;font-weight:800;}.hdr .ti p{font-size:9px;opacity:.7;margin-top:3px;}';
+  html+='.ig{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:#e2e8f0;border:1px solid #e2e8f0;border-radius:4px;overflow:hidden;margin-bottom:10px;}';
+  html+='.ic{background:#fff;padding:6px 10px;}.ic.w2{grid-column:span 2;}.ic label{display:block;font-size:8px;color:#94a3b8;font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:2px;}.ic span{font-size:11px;font-weight:700;color:#0f172a;}';
+  html+='.sb{display:flex;gap:6px;margin-bottom:10px;}.sv{flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;text-align:center;}.sv .v{font-size:18px;font-weight:800;line-height:1.1;}.sv label{font-size:8px;color:#94a3b8;font-weight:600;letter-spacing:.3px;text-transform:uppercase;}';
+  html+='table.mt{width:100%;border-collapse:collapse;}table.mt th,table.mt td{border:1px solid #e2e8f0;vertical-align:middle;}';
+  html+='.badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:800;background:'+resultBg+';color:'+resultColor+';border:1.5px solid '+resultColor+';}';
+  html+='.sig{display:flex;gap:20px;margin-top:14px;padding-top:10px;border-top:1px solid #e2e8f0;}.sbox{flex:1;text-align:center;}.sline{border-bottom:1px solid #334155;margin:0 16px 4px 16px;height:28px;}.sbox label{font-size:10px;color:#64748b;}';
+  html+='.sec-blk{border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;margin-bottom:10px;}';
+  html+='.sec-hdr{background:#1e3a5f;color:#fff;font-size:10px;font-weight:700;padding:5px 10px;letter-spacing:.5px;}';
+  html+='.pbtn{position:fixed;bottom:20px;right:20px;background:#1e3a5f;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3);}';
+  html+='</style></head><body><div class="wrap">';
+
+  html+='<div class="hdr"><div class="co">'+companyName+'<span>IQC QUALITY MANAGEMENT SYSTEM</span></div>';
+  html+='<div class="ti"><h1>進料品質量測報告</h1><p>IQC Measurement Report | '+reportNo+'</p></div></div>';
+
+  html+='<div class="ig">';
+  html+='<div class="ic"><label>供應商</label><span>'+(rec.sup||'—')+'</span></div>';
+  html+='<div class="ic"><label>供應商代號</label><span>'+(rec.supCode||'—')+'</span></div>';
+  html+='<div class="ic w2"><label>料號 Part Number</label><span>'+(rec.part||'—')+'</span></div>';
+  html+='<div class="ic"><label>IQC 日期</label><span>'+(rec.date||'—')+'</span></div>';
+  html+='<div class="ic"><label>報告日期</label><span>'+nowStr+'</span></div>';
+  html+='<div class="ic"><label>品名 / 工藝</label><span>'+(rec.pname||'—')+(partInfo.craft?' / '+partInfo.craft:'')+'</span></div>';
+  html+='<div class="ic"><label>OQC 報告書號</label><span>'+(rec.oqc||'—')+'</span></div>';
+  html+='<div class="ic"><label>抽檢數</label><span>'+(rec.total||samples.length)+' 件</span></div>';
+  html+='<div class="ic"><label>合格 / 不合格</label><span><span style="color:#059669;">'+(rec.pass!=null?rec.pass:'—')+'</span> / <span style="color:#dc2626;">'+(rec.fail!=null?rec.fail:'—')+'</span></span></div>';
+  html+='<div class="ic"><label>總判定</label><span class="badge">'+(rec.result==='合格'?'✅':'❌')+' '+(rec.result||'—')+'</span></div>';
+  html+='</div>';
+
+  html+='<div class="sb">';
+  html+='<div class="sv"><div class="v" style="color:#1e3a5f;">'+samples.length+'</div><label>量測樣品</label></div>';
+  html+='<div class="sv"><div class="v" style="color:#1e3a5f;">'+featNames.length+'</div><label>特徵點數</label></div>';
+  html+='<div class="sv"><div class="v" style="color:#059669;">'+totalOK+'</div><label>合格量測點</label></div>';
+  html+='<div class="sv"><div class="v" style="color:'+(totalNG>0?'#dc2626':'#059669')+';">'+totalNG+'</div><label>不合格量測點</label></div>';
+  html+='<div class="sv"><div class="v" style="color:'+(totalNG>0?'#dc2626':'#059669')+';">'+passRate+'%</div><label>量測合格率</label></div>';
+  html+='</div>';
+
+  // Integrated section: Drawing + Table
+  html+='<div class="sec-blk">';
+  html+='<div class="sec-hdr">📐 工程圖 &amp; 量測明細 / 統計結果  Drawing &amp; Measurement Details + Statistics</div>';
+  html+='<div style="padding:10px 12px;background:#fff;">';
+  if(drawings.length){html+=drawHtml+'<div style="border-top:1px dashed #e2e8f0;margin-bottom:8px;"></div>';}
+  html+='<table class="mt"><thead><tr>'+thCols+'</tr></thead><tbody>'+tbRows+'</tbody></table>';
+  html+='</div></div>';
+
+  html+=noteHtml;
+
+  // 外觀確認 (always 良好)
+  html+='<div style="display:flex;align-items:center;gap:24px;padding:8px 14px;border:1px solid #e2e8f0;border-radius:6px;margin-top:10px;margin-bottom:10px;background:#fff;">';
+  html+='<span style="font-size:11px;font-weight:700;color:#1e293b;">外觀確認 Visual Inspection：</span>';
+  html+='<span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#059669;"><span style="width:16px;height:16px;border:2px solid #059669;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;background:#d1fae5;font-size:11px;">✓</span> 良好 Good</span>';
+  html+='<span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#94a3b8;"><span style="width:16px;height:16px;border:2px solid #94a3b8;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;background:#fff;"></span> 不良 Defective</span>';
+  html+='</div>';
+
+  // 簽核欄
+  html+='<div class="sig">';
+  html+='<div class="sbox"><div class="sline"></div><label>檢驗員 Inspector</label></div>';
+  html+='<div class="sbox"><div class="sline"></div><label>審核者 Reviewer</label></div>';
+  html+='<div class="sbox" style="flex:0.5;"><div class="sline"></div><label>日期 Date</label></div>';
+  html+='</div>';
+
+  // 外觀確認品項說明 (bottom, black text)
+  html+='<div style="margin-top:14px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;">';
+  html+='<div style="background:#1e3a5f;color:#fff;font-size:10px;font-weight:700;padding:5px 10px;letter-spacing:.5px;">外觀確認品項說明  Visual Inspection Criteria</div>';
+  html+='<div style="padding:8px 12px;background:#fff;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 20px;">';
+  var vi=[['1. 外觀整潔度  Cleanliness','表面乾淨，無污漬、灰塵  Surface clean, no stains or dust'],['2. 表面缺陷  Surface Defects','無刮傷、裂痕、凹陷或破損  No scratches, cracks, dents, or damages'],['3. 顏色與塗裝  Color & Coating','顏色均勻無色差，塗層完整  Color even, coating intact'],['4. 尺寸與形狀  Dimensions & Shape','尺寸正確，形狀無變形  Correct size, shape intact'],['5. 組裝狀況  Assembly','零件齊全，安裝牢固  All parts complete, firmly assembled'],['6. 標籤與標籤  Labels & Markings','標籤清晰，黏貼正確  Labels clear and properly applied'],['7. 功能外觀  Functional Appearance','按鍵、插孔完整，透明件無刮傷  Buttons and sockets intact, transparent parts scratch-free']];
+  vi.forEach(function(item){html+='<div style="font-size:10px;color:#374151;padding:3px 0;border-bottom:1px solid #f1f5f9;"><b style="color:#1e3a5f;">'+item[0]+'</b> – '+item[1]+'</div>';});
+  html+='</div></div></div>';
+
+  html+='<div style="margin-top:12px;text-align:center;font-size:9px;color:#cbd5e1;border-top:1px solid #f1f5f9;padding-top:8px;">'+companyName+' | '+reportNo+' | 產生時間：'+now.toLocaleString('zh-TW')+'</div>';
+  html+='</div>';
+  html+='<button class="pbtn no-print" onclick="window.print()">\u5217\u5370 / \u53e6\u5b58 PDF</button>';
+  html+='</body></html>';
+
+  var w=window.open('','_blank','width=920,height=820');
+  w.document.write(html);
+  w.document.close();
+}
+
 async function saveMeas(){
   M[measId]=JSON.parse(JSON.stringify(measState));
   try{await api('POST','/measurements',{iqcId:measId,samples:measState.samples});}catch(e){toast('儲存失敗：'+e.message,true);return;}
@@ -2706,7 +2966,17 @@ async function addPart(){
     document.getElementById('p_consec').value='10';document.getElementById('p_rate').value='0.95';
   }catch(e){console.error('儲存失敗:',e.message);toast('儲存失敗：'+e.message,true);}
 }
-async function delPart(id){if(!confirm('確定要刪除？'))return;const bk=P.find(p=>p.id===id);P=P.filter(p=>p.id!==id);renderParts();toast('☁️ 已刪除');api('DELETE','/parts/'+id).catch(e=>{if(bk)P.push(bk);renderParts();toast('刪除失敗，已還原',true);});}
+async function delPart(id){
+  if(!confirm('確定要刪除？此料號的特徵點與照片也會一併刪除'))return;
+  const bk=P.find(p=>p.id===id);
+  const fk=bk?(bk.sup+'||'+bk.part):null;
+  P=P.filter(p=>p.id!==id);
+  if(fk&&F[fk])delete F[fk];
+  renderParts();toast('☁️ 已刪除');
+  api('DELETE','/parts/'+id).catch(e=>{if(bk)P.push(bk);renderParts();toast('刪除失敗，已還原',true);});
+  // 連帶清掉雲端的特徵點/照片(空陣列=後端只刪不插)
+  if(fk)api('POST','/feats',{key:fk,feats:[],drawing:''}).catch(function(){});
+}
 
 // Feature template modal
 function openFeatModal(sup,part){
