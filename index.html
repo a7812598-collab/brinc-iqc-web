@@ -3324,7 +3324,13 @@ async function addPart(){
     }catch(e){toast('更新失敗：'+e.message,true);}
     return;
   }
-  // 新增
+  // 新增 — 重複檢查
+  const dup=P.find(x=>x.sup===sup&&x.part===part);
+  if(dup){
+    const go=confirm(`⚠️ 「${sup} × ${part}」已存在！\n\n若要修改請點「確定」切換到編輯模式，或點「取消」返回。`);
+    if(go){editPart(dup.id);}
+    return;
+  }
   try{
     const resp=await api('POST','/parts',{sup,code,part,craft,consec,rate,note});
     P.push({id:resp.id||nid(P),sup,code,part,craft,consec,rate,note});
@@ -6422,7 +6428,7 @@ function scOpenDetail(id){
       +(r.background?'<div style="background:#f8fafc;border-radius:8px;padding:10px 12px;font-size:13px;color:#334155;line-height:1.7;white-space:pre-wrap;margin-top:6px;">'+scEsc(r.background)+'</div>':'')
     +'</div>'
     +'<div class="sc-det-sec"><h3>特控管控項目</h3>'
-      +'<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#f8fafc;"><th style="padding:8px 10px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">管控項目</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">圖面規格</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">特控允收標準</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">管控方式</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">頻率</th></tr></thead><tbody>'+specRows+'</tbody></table>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#f8fafc;"><th style="padding:8px 10px;n:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">管控項目</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">圖面規格</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">特控允收標準</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">管控方式</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">頻率</th></tr></thead><tbody>'+specRows+'</tbody></table>'
     +'</div>'
     +'<div class="sc-det-sec"><h3>驗收佐證記錄（共 '+(r.inspections||[]).length+' 批）</h3>'+inspHTML+'</div>'
     +((r.photos||[]).length?'<div class="sc-det-sec"><h3>佐證照片（'+r.photos.length+' 張）</h3><div class="sc-photo-grid">'+(r.photos||[]).map(function(p){return '<div class="sc-photo-thumb" onclick="scOpenLightboxDirect(\''+p.dataUrl+'\',\''+scEsc(p.name)+'\')"><img src="'+p.dataUrl+'" alt=""><div class="sc-ph-lbl">'+scEsc(p.name)+'</div></div>';}).join('')+'</div></div>':'')
@@ -6443,5 +6449,113 @@ function scDeleteRecord(id){
 }
 function scDRow(l,v){return '<div class="sc-det-row"><span class="sc-lbl">'+l+'</span><span class="sc-val">'+v+'</span></div>';}
 </script>
+
+<style>
+.m-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:68px;background:#fff;border-top:1px solid #e2e8f0;z-index:800;grid-template-columns:repeat(5,1fr);padding:0;box-shadow:0 -4px 20px rgba(0,0,0,.08);}
+.m-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;color:#94a3b8;font-size:10px;font-weight:600;padding:8px 4px 12px;transition:.15s;letter-spacing:.2px;-webkit-tap-highlight-color:transparent;}
+.m-tab:active{background:rgba(8,145,178,.06);}
+.m-tab.m-active{color:#0891b2;}
+.m-icon{font-size:20px;line-height:1;display:block;}
+.m-tab-add .m-icon{background:linear-gradient(135deg,#0891b2,#0369a1);color:#fff;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 14px rgba(8,145,178,.4);margin-top:-12px;}
+.m-tab-add.m-active .m-icon{background:linear-gradient(135deg,#0369a1,#0e7490);}
+.m-drawer-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:850;}
+.m-drawer-bg.open{display:block;}
+.m-drawer{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;z-index:860;padding:0;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);max-height:80vh;overflow-y:auto;}
+.m-drawer.open{transform:translateY(0);}
+.m-drawer-handle{width:36px;height:4px;border-radius:2px;background:#e2e8f0;margin:12px auto 8px;}
+.m-drawer-title{font-size:13px;font-weight:700;color:#64748b;padding:0 20px 12px;letter-spacing:.5px;text-transform:uppercase;}
+.m-drawer-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:0 8px 24px;}
+.m-drawer-btn{display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 4px;background:none;border:none;cursor:pointer;border-radius:12px;transition:.12s;-webkit-tap-highlight-color:transparent;}
+.m-drawer-btn:active{background:#f1f5f9;}
+.m-drawer-icon{font-size:24px;line-height:1;}
+.m-drawer-label{font-size:10.5px;font-weight:600;color:#475569;text-align:center;line-height:1.3;}
+@media(max-width:768px){
+  .m-nav{display:grid;}
+  .sidebar{display:none !important;}
+  .layout{flex-direction:column;}
+  main{padding:12px 12px 88px;overflow-x:hidden;}
+  header{padding:0 12px;height:52px;gap:8px;}
+  .kpi-row{grid-template-columns:repeat(2,1fr);gap:8px;}
+  .kpi{padding:14px 12px 12px;}
+  .sc-stats-row{grid-template-columns:repeat(2,1fr);gap:8px;}
+  .form-grid{grid-template-columns:1fr !important;}
+  .sc-fg-grid{grid-template-columns:1fr !important;}
+  .fg-grid{grid-template-columns:1fr !important;}
+  .sc-fg.span2,.sc-fg.span3{grid-column:auto !important;}
+  .form-group.span2{grid-column:auto !important;}
+  .modal-overlay{padding:0 !important;align-items:flex-end !important;}
+  .modal{border-radius:20px 20px 0 0 !important;max-width:100% !important;max-height:92vh;width:100%;}
+  .sc-overlay{padding:0 !important;align-items:flex-end !important;}
+  .sc-modal{border-radius:20px 20px 0 0 !important;max-width:100% !important;max-height:92vh;}
+  .sc-modal-body{max-height:75vh;}
+  .sc-photo-grid{grid-template-columns:repeat(3,1fr);}
+  .filter-row{flex-wrap:wrap;gap:8px;}
+  .sc-list-hdr{flex-wrap:wrap;gap:8px;}
+  .sc-list-hdr input{width:100% !important;margin-left:0 !important;}
+  .section-header{flex-wrap:wrap;gap:8px;}
+  .date-badge{display:none;}
+  .btn,.btn-sm{min-height:40px;}
+  .fi,input.fi,select.fi{min-height:42px;font-size:15px;}
+}
+</style>
+
+<nav class="m-nav" id="mobileNav">
+  <button class="m-tab m-active" onclick="mNav('dashboard')"><span class="m-icon">📊</span>儀表板</button>
+  <button class="m-tab" onclick="mNav('history')"><span class="m-icon">📋</span>抽檢</button>
+  <button class="m-tab m-tab-add" onclick="mNav('add')"><span class="m-icon">➕</span>新增</button>
+  <button class="m-tab" onclick="mNav('specctrl')"><span class="m-icon">📐</span>特控</button>
+  <button class="m-tab" id="mMoreBtn" onclick="toggleMDrawer()"><span class="m-icon">☰</span>更多</button>
+</nav>
+<div class="m-drawer-bg" id="mDrawerBg" onclick="closeMDrawer()"></div>
+<div class="m-drawer" id="mDrawer">
+  <div class="m-drawer-handle"></div>
+  <div class="m-drawer-title">所有功能</div>
+  <div class="m-drawer-grid">
+    <button class="m-drawer-btn" onclick="mNav('eval')"><span class="m-drawer-icon">🏆</span><span class="m-drawer-label">供應商評鑑</span></button>
+    <button class="m-drawer-btn" onclick="mNav('npi')"><span class="m-drawer-icon">🧪</span><span class="m-drawer-label">NPI 管理</span></button>
+    <button class="m-drawer-btn" onclick="mNav('sqe')"><span class="m-drawer-icon">🏭</span><span class="m-drawer-label">SQE 管理</span></button>
+    <button class="m-drawer-btn" onclick="mNav('trend')"><span class="m-drawer-icon">📈</span><span class="m-drawer-label">趨勢分析</span></button>
+    <button class="m-drawer-btn" onclick="mNav('health')"><span class="m-drawer-icon">🔎</span><span class="m-drawer-label">健康看板</span></button>
+    <button class="m-drawer-btn" onclick="mNav('gs')"><span class="m-drawer-icon">🥇</span><span class="m-drawer-label">Golden Sample</span></button>
+    <button class="m-drawer-btn" onclick="mNav('import')"><span class="m-drawer-icon">📥</span><span class="m-drawer-label">批次匯入</span></button>
+    <button class="m-drawer-btn" onclick="mNav('parts')"><span class="m-drawer-icon">🔧</span><span class="m-drawer-label">料號主檔</span></button>
+    <button class="m-drawer-btn" onclick="mNav('users')"><span class="m-drawer-icon">👥</span><span class="m-drawer-label">使用者</span></button>
+    <button class="m-drawer-btn" onclick="mNav('guide')"><span class="m-drawer-icon">📖</span><span class="m-drawer-label">說明</span></button>
+  </div>
+</div>
+
+<script>
+var M_MAIN=['dashboard','history','add','specctrl'];
+function mNav(page){
+  closeMDrawer();showPage(page);
+  document.querySelectorAll('.m-tab').forEach(function(b){b.classList.remove('m-active');});
+  var idx=M_MAIN.indexOf(page);
+  if(idx>=0){document.querySelectorAll('.m-tab')[idx].classList.add('m-active');}
+  else{var mb=document.getElementById('mMoreBtn');if(mb)mb.classList.add('m-active');}
+}
+function toggleMDrawer(){
+  var d=document.getElementById('mDrawer'),bg=document.getElementById('mDrawerBg');
+  if(d.classList.contains('open')){closeMDrawer();}
+  else{d.style.display='block';bg.classList.add('open');requestAnimationFrame(function(){d.classList.add('open');});document.getElementById('mMoreBtn').classList.add('m-active');}
+}
+function closeMDrawer(){
+  var d=document.getElementById('mDrawer'),bg=document.getElementById('mDrawerBg');
+  d.classList.remove('open');bg.classList.remove('open');
+  setTimeout(function(){if(!d.classList.contains('open'))d.style.display='none';},300);
+}
+(function(){
+  var _o=window.showPage;
+  window.showPage=function(name){
+    _o(name);
+    if(window.innerWidth<=768){
+      document.querySelectorAll('.m-tab').forEach(function(b){b.classList.remove('m-active');});
+      var i=M_MAIN.indexOf(name);
+      if(i>=0){document.querySelectorAll('.m-tab')[i].classList.add('m-active');}
+      else{var mb=document.getElementById('mMoreBtn');if(mb)mb.classList.add('m-active');}
+    }
+  };
+})();
+</script>
+
 </body>
 </html>
