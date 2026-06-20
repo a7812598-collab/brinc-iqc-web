@@ -1653,6 +1653,10 @@ function doLogin(){
     .then(user=>{
       currentUser=user;
       try{sessionStorage.setItem('iqcUser',JSON.stringify(user));}catch(e){}
+      // 手機版：記住登入
+      if(window.innerWidth<=768){
+        try{localStorage.setItem('iqcMobileUser',JSON.stringify(user));}catch(e){}
+      }
       document.getElementById('loginScreen').style.display='none';
       applyPermissions();
       startApp();
@@ -1730,6 +1734,7 @@ function startApp(){
 function doLogout(){
   currentUser=null;
   try{sessionStorage.removeItem('iqcUser');}catch(e){}
+  try{localStorage.removeItem('iqcMobileUser');}catch(e){}
   location.reload();
 }
 function applyPermissions(){
@@ -5720,6 +5725,16 @@ document.addEventListener('DOMContentLoaded',()=>{
       document.getElementById('loginScreen').style.display='none';
       applyPermissions();
       startApp();
+    } else if(window.innerWidth<=768){
+      // 手機版：嘗試自動登入
+      const mob=localStorage.getItem('iqcMobileUser');
+      if(mob){
+        currentUser=JSON.parse(mob);
+        try{sessionStorage.setItem('iqcUser',mob);}catch(e){}
+        document.getElementById('loginScreen').style.display='none';
+        applyPermissions();
+        startApp();
+      }
     }
   }catch(e){}
 
