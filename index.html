@@ -317,6 +317,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
   <button onclick="showPage('add')">➕ 新增記錄</button>
   <button onclick="showPage('parts')">🔧 料號主檔</button>
   <button onclick="showPage('users')">👥 使用者管理</button>
+  <button onclick="showPage('specctrl')">📐 特控管制</button>
   <button onclick="showPage('guide')">📖 說明</button>
 </aside>
 <main>
@@ -327,7 +328,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding-left:2px;">
     <span style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);font-weight:600;">🔍 IQC 抽檢</span>
     <div style="display:flex;gap:8px;">
-      <button class="btn btn-ghost btn-sm" onclick="showWeeklyAbnormal()" style="display:flex;align-items:center;gap:5px;">⚠️ 上週異常概覽</button>
+      <button class="btn btn-ghost btn-sm" onclick="showWeeklyAbnormal()" style="display:flex;align-items:center;gap:5px;">⚠️ 異常概覽</button>
       <button class="btn btn-primary btn-sm" onclick="openReportModal()" style="display:flex;align-items:center;gap:5px;">📋 產生本週品質周報</button>
     </div>
   </div>
@@ -751,6 +752,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
         <option value="car">CAR</option>
         <option value="8d">8D</option>
         <option value="audit">稽核</option>
+        <option value="specctrl">特控管制</option>
       </select>
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('healthSearch').value='';renderHealthBoard()">清除</button>
     </div>
@@ -1007,10 +1009,130 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
       </div>
     </div>
 
+    <!-- 量測分析說明 -->
+    <div style="margin-bottom:28px;">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #0891b2;">🔬 量測分析功能 — 分析流程說明</div>
+
+      <!-- 資料來源 -->
+      <div style="background:var(--surface2);border-radius:8px;padding:14px 16px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:600;color:#0891b2;margin-bottom:6px;">① 資料來源</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+          選定<b>供應商 + 料號</b>後，系統抓出該組合<b>所有歷史 IQC 抽檢批次</b>中有填量測明細的記錄，依日期由舊到新排序。<br>
+          ⚠️ 資料批次越多，分析結果越準確。若只有一批，趨勢分析將顯示「資料點不足」。
+        </div>
+      </div>
+
+      <!-- 每個特徵點分析 -->
+      <div style="background:var(--surface2);border-radius:8px;padding:14px 16px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:600;color:#0891b2;margin-bottom:8px;">② 每個特徵點各自分析（所有批次合併計算）</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="background:var(--bg);border-radius:6px;padding:10px 12px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:4px;">Mean / 3σ / Cpk</div>
+            <div style="font-size:12px;color:var(--text2);">將<b>所有批次所有樣品</b>的量測值合在一起計算，代表製程的<b>長期整體能力</b></div>
+          </div>
+          <div style="background:var(--bg);border-radius:6px;padding:10px 12px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:4px;">最新批平均 vs 歷史均值差異 %</div>
+            <div style="font-size:12px;color:var(--text2);"><b>最後一筆批次</b>的樣品平均值，與<b>前面所有批次</b>合併平均值的百分比差，用來偵測製程漂移</div>
+          </div>
+          <div style="background:var(--bg);border-radius:6px;padding:10px 12px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:4px;">趨勢方向</div>
+            <div style="font-size:12px;color:var(--text2);">把每批次的樣品平均值排成時間序列，以<b>線性回歸斜率</b>判斷方向（需 ≥ 3 批）<br>
+              <span style="color:var(--pass)">↔ 穩定</span>　<span style="color:var(--warn)">↑ 向上漂移</span>　<span style="color:var(--warn)">↓ 向下漂移</span>
+            </div>
+          </div>
+          <div style="background:var(--bg);border-radius:6px;padding:10px 12px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:4px;">超規格點數（OOS）</div>
+            <div style="font-size:12px;color:var(--text2);">全部歷史量測值中，落在 LSL～USL 範圍<b>外</b>的個數</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 整體允收結論 -->
+      <div style="background:var(--surface2);border-radius:8px;padding:14px 16px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:600;color:#0891b2;margin-bottom:8px;">③ 整體允收結論（最終 Banner）</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:6px;background:#fff1f2;">
+            <span style="font-size:14px;">❌</span>
+            <span><b style="color:#991b1b;">拒收</b>　任何特徵點 Cpk &lt; 1.0 → 製程能力不足，建議退貨或全檢</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:6px;background:#fef9c3;">
+            <span style="font-size:14px;">⚠️</span>
+            <span><b style="color:#92400e;">條件允收</b>　任何特徵點 Cpk &lt; 1.33，或有漂移趨勢（↑ ↓）→ 需加強監控</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:6px;background:#d1fae5;">
+            <span style="font-size:14px;">✅</span>
+            <span><b style="color:#065f46;">允收</b>　全部特徵點 Cpk ≥ 1.33 且趨勢穩定 → 製程能力充足，歷史數據穩定</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cpk 判定基準 -->
+      <div style="background:var(--surface2);border-radius:8px;padding:14px 16px;">
+        <div style="font-size:12px;font-weight:600;color:#0891b2;margin-bottom:8px;">Cpk 判定基準</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+          <div style="background:#d1fae5;border:1px solid #059669;border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:13px;font-weight:800;color:#065f46;">Cpk ≥ 1.67</div>
+            <div style="font-size:11px;font-weight:700;color:#065f46;margin-top:3px;">✅ 優良</div>
+            <div style="font-size:10px;color:#374151;margin-top:3px;">製程能力充裕<br>可考慮放寬抽檢</div>
+          </div>
+          <div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:13px;font-weight:800;color:#059669;">Cpk ≥ 1.33</div>
+            <div style="font-size:11px;font-weight:700;color:#059669;margin-top:3px;">✅ 允收</div>
+            <div style="font-size:10px;color:#374151;margin-top:3px;">符合一般<br>品質要求</div>
+          </div>
+          <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:13px;font-weight:800;color:#92400e;">Cpk ≥ 1.00</div>
+            <div style="font-size:11px;font-weight:700;color:#92400e;margin-top:3px;">⚠️ 邊界</div>
+            <div style="font-size:10px;color:#374151;margin-top:3px;">需加強監控<br>建議改善製程</div>
+          </div>
+          <div style="background:#fff1f2;border:1px solid #fca5a5;border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:13px;font-weight:800;color:#991b1b;">Cpk &lt; 1.00</div>
+            <div style="font-size:11px;font-weight:700;color:#991b1b;margin-top:3px;">❌ 拒收</div>
+            <div style="font-size:10px;color:#374151;margin-top:3px;">製程能力不足<br>建議退貨或全檢</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div style="margin-top:20px;padding:12px 16px;background:rgba(79,110,247,.06);border:1px solid rgba(79,110,247,.2);border-radius:8px;font-size:12px;color:var(--text2);">
       💾 <b style="color:var(--text)">資料儲存</b>：所有資料儲存於瀏覽器 localStorage，重新整理後仍保留。匯出前請定期備份（可用 CSV 匯出功能）。
     </div>
   </div>
+</div>
+</div>
+
+<!-- ── SC Page ───────────────────────────────────────────────────── -->
+<div class="page" id="page-specctrl">
+<div style="padding:20px;">
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <div>
+      <div style="font-size:16px;font-weight:700;color:#1e3a5f;">📐 特控管制表</div>
+      <div style="font-size:12px;color:#64748b;margin-top:2px;">圖面/規格未正式更新時的特殊允收依據與驗收佐證</div>
+    </div>
+    <button class="sc-btn-new" onclick="scOpenNewForm()">＋ 新增特控</button>
+  </div>
+  <!-- Stats -->
+  <div class="sc-stats-row">
+    <div class="sc-stat-card"><div class="sc-stat-icon" style="background:#e0f2fe;">📋</div><div><div class="sc-stat-val" id="sc-s-total">0</div><div class="sc-stat-lbl">全部特控</div></div></div>
+    <div class="sc-stat-card"><div class="sc-stat-icon" style="background:#dbeafe;">🔵</div><div><div class="sc-stat-val" id="sc-s-active" style="color:#0369a1;">0</div><div class="sc-stat-lbl">進行中</div></div></div>
+    <div class="sc-stat-card"><div class="sc-stat-icon" style="background:#fef9c3;">⚠️</div><div><div class="sc-stat-val" id="sc-s-expiring" style="color:#d97706;">0</div><div class="sc-stat-lbl">即將到期（14天內）</div></div></div>
+    <div class="sc-stat-card"><div class="sc-stat-icon" style="background:#fef2f2;">🔴</div><div><div class="sc-stat-val" id="sc-s-expired" style="color:#dc2626;">0</div><div class="sc-stat-lbl">已過期未結案</div></div></div>
+  </div>
+  <!-- List header -->
+  <div class="sc-list-hdr">
+    <h2>特控記錄列表</h2>
+    <select id="scFilterStatus" onchange="scRenderList()" style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;font-size:12px;outline:none;">
+      <option value="open">未結案（預設）</option>
+      <option value="active">進行中</option>
+      <option value="pending">待審核</option>
+      <option value="expired">已過期</option>
+      <option value="closed">已結案</option>
+      <option value="">全部（含已結案）</option>
+    </select>
+    <input id="scSearchInput" placeholder="🔍 料號 / 客戶 / 品項…" oninput="scRenderList()" style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 10px;font-size:12px;outline:none;width:200px;margin-left:auto;">
+  </div>
+  <div id="scListContainer"><div class="sc-empty"><div class="sc-ei">📋</div>尚無特控記錄<br><span style="font-size:13px;">點擊右上角「＋ 新增特控」建立第一筆</span></div></div>
 </div>
 </div>
 
@@ -1054,6 +1176,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
     <div class="modal-body" id="measBody"></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('measModal')">關閉</button>
+      <button class="btn btn-ghost" onclick="exportMeasExcel()" style="border-color:#059669;color:#059669;">📊 下載 Excel</button>
       <button class="btn btn-ghost" onclick="exportMeasReport()" style="border-color:#0891b2;color:#0891b2;">📄 匯出報告 PDF</button>
       <button class="btn btn-primary" onclick="saveMeas()">✓ 儲存量測</button>
     </div>
@@ -1317,7 +1440,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
         <div class="photo-slot">
           <div class="photo-slot-hdr ng">❌ NG 照片（問題現象）
             <label class="photo-upload-label" style="padding:3px 8px;font-size:11px;">
-              上傳<input type="file" accept="image/*" style="display:none" onchange="loadPhoto(this,'car_ng_preview','car_ng_data')">
+              上傳<input type="file" accept="image/*" style="display:none" onchange="loadPhoto(this,'car_ng_body','car_ng_data')">
             </label>
           </div>
           <div class="photo-slot-body" id="car_ng_body">
@@ -1327,7 +1450,7 @@ textarea.fi{resize:vertical;min-height:64px;font-family:var(--font);}
         <div class="photo-slot">
           <div class="photo-slot-hdr ok">✅ OK 照片（改善確認）
             <label class="photo-upload-label" style="padding:3px 8px;font-size:11px;">
-              上傳<input type="file" accept="image/*" style="display:none" onchange="loadPhoto(this,'car_ok_preview','car_ok_data')">
+              上傳<input type="file" accept="image/*" style="display:none" onchange="loadPhoto(this,'car_ok_body','car_ok_data')">
             </label>
           </div>
           <div class="photo-slot-body" id="car_ok_body">
@@ -1510,8 +1633,8 @@ const API_KEY  = '255hf7LaWXm0QIn-wE7U4MH8_-MScT9Vhiq7Z_BnJr8iAzFu-6hxbg==';
 // ===== 登入權限系統 =====
 let currentUser=null;
 const ROLE_PAGES={
-  admin:['dashboard','history','eval','npi','sqe','trend','health','gs','import','add','parts','guide','users'],
-  iqc:['dashboard','history','add','parts','gs','npi','guide'],
+  admin:['dashboard','history','eval','npi','sqe','trend','health','gs','import','add','parts','guide','users','specctrl'],
+  iqc:['dashboard','history','add','parts','gs','npi','guide','specctrl'],
   guest:['dashboard','trend','health','guide']
 };
 function doLogin(){
@@ -2513,10 +2636,284 @@ function measAddFeat(cid){
 function measRemFeat(cid,si,fi){
   const st=getMeasState(cid);st.samples[si].features.splice(fi,1);renderMeasBody(cid,st,true);
 }
+function exportMeasExcel(){
+  var id=measId;
+  var rec=H.find(function(r){return r.id===id;});
+  if(!rec){toast('找不到 IQC 記錄',true);return;}
+  var meas=M[id];
+  if(!meas||!meas.samples||!meas.samples.length){toast('尚無量測資料',true);return;}
 
-// ═══════════════════════════════════════════════════════════════
-// PDF MEASUREMENT REPORT EXPORT
-// ═══════════════════════════════════════════════════════════════
+  var partInfo=P.find(function(p){return p.sup===rec.sup&&p.part===rec.part;})||{};
+  var samples=meas.samples;
+  var featNames=[];
+  samples.forEach(function(s){s.features.forEach(function(f){if(featNames.indexOf(f.name)<0)featNames.push(f.name);});});
+
+  var now=new Date();
+  var nowStr=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0');
+  var reportNo='IQC-RPT-'+id+'-'+now.getFullYear()+(now.getMonth()+1).toString().padStart(2,'0');
+  var coEl=document.querySelector('.logo-text');
+  var companyName=coEl?coEl.textContent.trim():'Solution Consultant Company';
+
+  // ── 統計計算 ──────────────────────────────────────────────────────────────
+  var totalOK=0,totalNG=0;
+  var featStats=featNames.map(function(fname){
+    var f0=null,vals=[],ng=0,ok=0;
+    samples.forEach(function(s){
+      var f=s.features.find(function(x){return x.name===fname;});
+      if(!f0&&f)f0=f;
+      if(!f||f.value===''||f.value===undefined)return;
+      if(calcValClass(f.lsl,f.usl,f.value)==='val-ng')ng++;else ok++;
+      var v=parseFloat(f.value);if(!isNaN(v))vals.push(v);
+    });
+    f0=f0||{};
+    var meanV='—',sig3='—',maxV='—',minV='—',rngV='—',cpkStr='—',fpct='—';
+    var cpkColor='#94a3b8',fpctColor='#059669';
+    if(vals.length){
+      var avg=vals.reduce(function(a,b){return a+b;},0)/vals.length;
+      meanV=avg.toFixed(4);
+      maxV=Math.max.apply(null,vals).toFixed(4);
+      minV=Math.min.apply(null,vals).toFixed(4);
+      rngV=(parseFloat(maxV)-parseFloat(minV)).toFixed(4);
+      if(vals.length>=2){var va=vals.reduce(function(a,v){return a+(v-avg)*(v-avg);},0)/(vals.length-1);sig3=(3*Math.sqrt(va)).toFixed(4);}
+    }
+    if(vals.length>=4&&(f0.lsl||f0.usl)){
+      var cpk=calcCpk(vals,f0.lsl?parseFloat(f0.lsl):null,f0.usl?parseFloat(f0.usl):null);
+      if(cpk!==null){cpkStr=cpk.toFixed(3);cpkColor=cpk>=1.33?'#059669':cpk>=1.0?'#d97706':'#dc2626';}
+    }
+    var tot=ok+ng;
+    if(tot>0){fpct=(ok/tot*100).toFixed(1)+'%';fpctColor=ng>0?'#dc2626':'#059669';}
+    totalOK+=ok;totalNG+=ng;
+    return{fname:fname,f0:f0,vals:vals,ok:ok,ng:ng,meanV:meanV,sig3:sig3,maxV:maxV,minV:minV,rngV:rngV,cpkStr:cpkStr,fpct:fpct,cpkColor:cpkColor,fpctColor:fpctColor};
+  });
+  var totalPts=totalOK+totalNG;
+  var passRate=totalPts>0?(totalOK/totalPts*100).toFixed(1)+'%':'—';
+  var resultColor=rec.result==='合格'?'#059669':'#dc2626';
+  var resultBg=rec.result==='合格'?'#d1fae5':'#fee2e2';
+
+  // ── 共用樣式 ─────────────────────────────────────────────────────────────
+  var TH='background:#1e3a5f;color:#ffffff;font-weight:bold;font-size:10pt;padding:6px 8px;border:1px solid #334155;text-align:center;vertical-align:middle;white-space:nowrap;';
+  var TH2='background:#2c4a7c;color:#ffffff;font-weight:bold;font-size:10pt;padding:6px 6px;border:1px solid #334155;text-align:center;vertical-align:middle;';
+  var TD ='border:1px solid #e2e8f0;padding:5px 7px;font-size:10pt;vertical-align:middle;';
+  var TDA='border:1px solid #e2e8f0;padding:5px 7px;font-size:10pt;vertical-align:middle;text-align:center;';
+  var LBL='background:#f1f5f9;font-weight:bold;color:#475569;font-size:9pt;padding:5px 8px;border:1px solid #e2e8f0;white-space:nowrap;';
+  var VAL='background:#ffffff;color:#0f172a;font-size:10pt;padding:5px 8px;border:1px solid #e2e8f0;';
+
+  // ── 量測資料列 HTML ───────────────────────────────────────────────────────
+  var dataRows='';
+  featStats.forEach(function(st,fi){
+    var rowBg=fi%2===0?'#ffffff':'#f8fafc';
+    var row='<tr style="background:'+rowBg+';">';
+    row+='<td style="'+TDA+'color:#94a3b8;">'+(fi+1)+'</td>';
+    row+='<td style="'+TD+'font-weight:700;color:#1e293b;">'+esc(st.fname)+'<br><span style="font-size:8pt;color:#94a3b8;font-weight:normal;">'+(st.f0.type||'')+(st.f0.equip?' | '+esc(st.f0.equip):'')+'</span></td>';
+    row+='<td style="'+TDA+'color:#475569;">'+(st.f0.lsl||'—')+'</td>';
+    row+='<td style="'+TDA+'color:#475569;">'+(st.f0.usl||'—')+'</td>';
+    row+='<td style="'+TDA+'color:#475569;">'+(st.f0.unit||'—')+'</td>';
+    samples.forEach(function(s){
+      var f=s.features.find(function(x){return x.name===st.fname;})||{value:'',lsl:st.f0.lsl,usl:st.f0.usl};
+      var haVal=f.value!==''&&f.value!==undefined;
+      var isNG=haVal&&calcValClass(f.lsl,f.usl,f.value)==='val-ng';
+      row+='<td style="'+TDA+(isNG?'color:#dc2626;font-weight:bold;':'color:#1e293b;')+'">'+(haVal?f.value:'—')+'</td>';
+    });
+    var statStyle=function(c){return TDA+'font-weight:700;color:'+c+';';};
+    row+='<td style="'+statStyle('#1d4ed8')+'">'+st.meanV+'</td>';
+    row+='<td style="'+statStyle('#6d28d9')+'">'+st.sig3+'</td>';
+    row+='<td style="'+statStyle('#065f46')+'">'+st.maxV+'</td>';
+    row+='<td style="'+statStyle('#991b1b')+'">'+st.minV+'</td>';
+    row+='<td style="'+statStyle('#92400e')+'">'+st.rngV+'</td>';
+    row+='<td style="'+TDA+'font-weight:bold;color:'+st.cpkColor+';">'+st.cpkStr+'</td>';
+    row+='<td style="'+TDA+'font-weight:bold;color:'+st.fpctColor+';">'+st.fpct+'</td>';
+    row+='</tr>';
+    dataRows+=row;
+  });
+
+  // ── 樣品欄頭 ─────────────────────────────────────────────────────────────
+  var sampleTh=samples.map(function(s){return '<th style="'+TH2+'">#'+s.sampleNo+'</th>';}).join('');
+
+  // ── 統計欄標題（顏色對應 PDF）────────────────────────────────────────────
+  function statTh(bg,label){return '<th style="background:'+bg+';color:#fff;font-weight:bold;font-size:9pt;padding:5px 4px;border:1px solid #334155;text-align:center;white-space:nowrap;">'+label+'</th>';}
+
+  // ── 完整 HTML ─────────────────────────────────────────────────────────────
+  var html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">'
+  +'<head><meta charset="UTF-8">'
+  +'<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>'
+  +'<x:Name>量測報告</x:Name>'
+  +'<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>'
+  +'</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->'
+  +'<style>body{font-family:"微軟正黑體","Segoe UI",Arial,sans-serif;font-size:10pt;}table{border-collapse:collapse;width:100%;}td,th{mso-number-format:"@";}</style>'
+  +'</head><body>';
+
+  // 報告標題列
+  html+='<table style="margin-bottom:0;">'
+  +'<tr>'
+  +'<td colspan="4" style="background:#1e3a5f;color:#fff;font-size:14pt;font-weight:bold;padding:12px 16px;border:none;">'+companyName+'<br><span style="font-size:9pt;font-weight:normal;opacity:.8;">IQC QUALITY MANAGEMENT SYSTEM</span></td>'
+  +'<td colspan="'+(samples.length+8)+'" style="background:#1e3a5f;color:#fff;font-size:15pt;font-weight:bold;text-align:right;padding:12px 16px;border:none;">進料品質量測報告<br><span style="font-size:9pt;font-weight:normal;opacity:.8;">IQC Measurement Report | '+reportNo+'</span></td>'
+  +'</tr>'
+  +'</table>';
+
+  // 空行
+  html+='<table><tr><td style="border:none;height:6px;"></td></tr></table>';
+
+  // 資訊格
+  html+='<table style="margin-bottom:0;"><tr>'
+  +'<td style="'+LBL+'">供應商</td><td style="'+VAL+'width:120px;">'+esc(rec.sup||'—')+'</td>'
+  +'<td style="'+LBL+'">供應商代號</td><td style="'+VAL+'width:100px;">'+esc(rec.supCode||'—')+'</td>'
+  +'<td style="'+LBL+'">料號 Part Number</td><td colspan="2" style="'+VAL+'width:180px;">'+esc(rec.part||'—')+'</td>'
+  +'<td style="'+LBL+'">IQC 日期</td><td style="'+VAL+'width:100px;">'+esc(rec.date||'—')+'</td>'
+  +'<td style="'+LBL+'">報告日期</td><td style="'+VAL+'">'+nowStr+'</td>'
+  +'</tr><tr>'
+  +'<td style="'+LBL+'">品名 / 工藝</td><td colspan="3" style="'+VAL+'">'+esc((rec.pname||'—')+(partInfo.craft?' / '+partInfo.craft:''))+'</td>'
+  +'<td style="'+LBL+'">OQC 報告書號</td><td style="'+VAL+'">'+esc(rec.oqc||'—')+'</td>'
+  +'<td style="'+LBL+'">抽檢數</td><td style="'+VAL+'">'+(rec.total||samples.length)+' 件</td>'
+  +'<td style="'+LBL+'">合格 / 不合格</td>'
+  +'<td style="'+VAL+'color:#059669;font-weight:bold;">'+(rec.pass!=null?rec.pass:'—')+'</td>'
+  +'<td style="'+LBL+'">總判定</td>'
+  +'</tr><tr>'
+  +'<td colspan="10" style="background:'+resultBg+';color:'+resultColor+';font-weight:bold;font-size:12pt;text-align:center;padding:7px;border:1.5px solid '+resultColor+';">'
+  +(rec.result==='合格'?'✅':'❌')+' 總判定：'+(rec.result||'—')+'</td>'
+  +'</tr></table>';
+
+  // 空行
+  html+='<table><tr><td style="border:none;height:6px;"></td></tr></table>';
+
+  // 統計摘要列
+  function statCard(label,val,color){
+    return '<td style="background:#f8fafc;border:1px solid #e2e8f0;padding:8px 14px;text-align:center;">'
+      +'<div style="font-size:16pt;font-weight:bold;color:'+color+';">'+val+'</div>'
+      +'<div style="font-size:8pt;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;">'+label+'</div>'
+      +'</td>';
+  }
+  html+='<table style="margin-bottom:0;"><tr>'
+  +statCard('量測樣品',samples.length,'#1e3a5f')
+  +statCard('特徵點數',featNames.length,'#1e3a5f')
+  +statCard('合格量測點',totalOK,'#059669')
+  +statCard('不合格量測點',totalNG,totalNG>0?'#dc2626':'#059669')
+  +statCard('量測合格率',passRate,totalNG>0?'#dc2626':'#059669')
+  +'</tr></table>';
+
+  // 空行
+  html+='<table><tr><td style="border:none;height:6px;"></td></tr></table>';
+
+  // 量測明細表
+  html+='<table><tr><td colspan="'+(5+samples.length+7)+'" style="background:#1e3a5f;color:#fff;font-weight:bold;font-size:10pt;padding:6px 10px;border:1px solid #1e3a5f;letter-spacing:.5px;">📐 量測明細 / 統計結果　Measurement Details + Statistics</td></tr>'
+  +'<tr>'
+  +'<th style="'+TH+'width:28px;">#</th>'
+  +'<th style="'+TH+'min-width:100px;">特徵點</th>'
+  +'<th style="'+TH+'width:50px;">LSL</th>'
+  +'<th style="'+TH+'width:50px;">USL</th>'
+  +'<th style="'+TH+'width:36px;">單位</th>'
+  +sampleTh
+  +statTh('#1d4ed8','Mean<br>平均')
+  +statTh('#6d28d9','3σ<br>標準差')
+  +statTh('#065f46','MAX<br>最大')
+  +statTh('#991b1b','MIN<br>最小')
+  +statTh('#92400e','R<br>範圍')
+  +statTh('#1e3a5f','Cpk')
+  +statTh('#1e3a5f','合格率')
+  +'</tr>'
+  +dataRows
+  +'</table>';
+
+  // 空行
+  html+='<table><tr><td style="border:none;height:8px;"></td></tr></table>';
+
+  // 備註
+  if(rec.note){
+    html+='<table><tr>'
+    +'<td style="'+LBL+'white-space:nowrap;">備註</td>'
+    +'<td style="background:#fef9c3;border-left:3px solid #f59e0b;padding:6px 10px;font-size:10pt;">'+esc(rec.note)+'</td>'
+    +'</tr></table>';
+    html+='<table><tr><td style="border:none;height:6px;"></td></tr></table>';
+  }
+
+  // 外觀確認
+  html+='<table><tr>'
+  +'<td style="'+LBL+'white-space:nowrap;font-size:10pt;">外觀確認 Visual Inspection</td>'
+  +'<td style="background:#d1fae5;color:#059669;font-weight:bold;font-size:11pt;padding:6px 16px;border:1.5px solid #059669;">☑ 良好 Good</td>'
+  +'<td style="padding:6px 16px;color:#94a3b8;border:1px solid #e2e8f0;">☐ 不良 Defective</td>'
+  +'</tr></table>';
+
+  // 空行
+  html+='<table><tr><td style="border:none;height:14px;"></td></tr></table>';
+
+  // 簽核欄
+  html+='<table><tr>'
+  +'<td style="'+LBL+'">簽核</td>'
+  +'<td style="border:1px solid #e2e8f0;width:180px;padding:4px 10px;"><div style="font-size:8pt;color:#94a3b8;">檢驗員 Inspector</div><div style="height:28px;border-bottom:1px solid #334155;"></div></td>'
+  +'<td style="border:none;width:20px;"></td>'
+  +'<td style="border:1px solid #e2e8f0;width:180px;padding:4px 10px;"><div style="font-size:8pt;color:#94a3b8;">審核者 Reviewer</div><div style="height:28px;border-bottom:1px solid #334155;"></div></td>'
+  +'<td style="border:none;width:20px;"></td>'
+  +'<td style="border:1px solid #e2e8f0;width:120px;padding:4px 10px;"><div style="font-size:8pt;color:#94a3b8;">日期 Date</div><div style="height:28px;border-bottom:1px solid #334155;"></div></td>'
+  +'</tr></table>';
+
+  // 空行
+  html+='<table><tr><td style="border:none;height:14px;"></td></tr></table>';
+
+  // 外觀確認品項說明
+  var viItems=[
+    ['1. 外觀整潔度  Cleanliness','表面乾淨，無污漬、灰塵  Surface clean, no stains or dust'],
+    ['2. 表面缺陷  Surface Defects','無刮傷、裂痕、凹陷或破損  No scratches, cracks, dents'],
+    ['3. 顏色與塗裝  Color & Coating','顏色均勻無色差，塗層完整  Color even, coating intact'],
+    ['4. 尺寸與形狀  Dimensions & Shape','尺寸正確，形狀無變形  Correct size, shape intact'],
+    ['5. 組裝狀況  Assembly','零件齊全，安裝牢固  All parts complete, firmly assembled'],
+    ['6. 標籤與標記  Labels & Markings','標籤清晰，黏貼正確  Labels clear and properly applied'],
+    ['7. 功能外觀  Functional Appearance','按鍵、插孔完整，透明件無刮傷  Buttons and sockets intact']
+  ];
+  html+='<table><tr><td colspan="2" style="background:#1e3a5f;color:#fff;font-weight:bold;font-size:10pt;padding:5px 10px;border:1px solid #1e3a5f;letter-spacing:.5px;">外觀確認品項說明　Visual Inspection Criteria</td></tr>';
+  viItems.forEach(function(item,i){
+    var bg=i%2===0?'#ffffff':'#f8fafc';
+    html+='<tr style="background:'+bg+';">'
+    +'<td style="font-weight:bold;color:#1e3a5f;border:1px solid #e2e8f0;padding:4px 10px;width:220px;font-size:9pt;white-space:nowrap;">'+item[0]+'</td>'
+    +'<td style="color:#374151;border:1px solid #e2e8f0;padding:4px 10px;font-size:9pt;">'+item[1]+'</td>'
+    +'</tr>';
+  });
+  html+='</table>';
+
+
+  // 量測分析說明
+  html+='<table><tr><td style="border:none;height:8px;"></td></tr></table>';
+  html+='<table>';
+  html+='<tr><td colspan="2" style="background:#1e3a5f;color:#fff;font-weight:bold;font-size:10pt;padding:5px 10px;border:1px solid #1e3a5f;letter-spacing:.5px;">📊 量測分析說明　Measurement Analysis Reference</td></tr>';
+  var anaRef=[
+    ['Mean（平均值）','所有量測值的算術平均，代表製程中心趨勢'],
+    ['3σ（三倍標準差）','量測值離散程度，越小代表製程越穩定'],
+    ['MAX / MIN','樣本最大值與最小值'],
+    ['R（全距）','MAX − MIN，反映批次內變異大小'],
+    ['Cpk（製程能力指數）','考量偏移後的雙邊製程能力，越高越好'],
+    ['合格率','本批次量測值落於 LSL～USL 範圍內的比例']
+  ];
+  anaRef.forEach(function(it,i){
+    var bg2=i%2===0?'#ffffff':'#f8fafc';
+    html+='<tr style="background:'+bg2+';">'
+    +'<td style="font-weight:bold;color:#1e3a5f;border:1px solid #e2e8f0;padding:4px 10px;width:180px;font-size:9pt;white-space:nowrap;">'+it[0]+'</td>'
+    +'<td style="color:#374151;border:1px solid #e2e8f0;padding:4px 10px;font-size:9pt;">'+it[1]+'</td>'
+    +'</tr>';
+  });
+  html+='<tr><td colspan="2" style="background:#f1f5f9;font-weight:bold;color:#1e3a5f;border:1px solid #e2e8f0;padding:5px 10px;font-size:9pt;">Cpk 判定基準</td></tr>';
+  [['Cpk ≥ 1.67','優良','#065f46','#d1fae5'],['Cpk ≥ 1.33','允收','#059669','#ecfdf5'],['Cpk ≥ 1.00','邊界（需監控）','#92400e','#fef9c3'],['Cpk < 1.00','製程能力不足（拒收）','#991b1b','#fff1f2']].forEach(function(r){
+    html+='<tr><td style="font-weight:bold;color:'+r[2]+';background:'+r[3]+';border:1px solid #e2e8f0;padding:4px 10px;font-size:9pt;">'+r[0]+'</td>'
+    +'<td style="font-weight:bold;color:'+r[2]+';background:'+r[3]+';border:1px solid #e2e8f0;padding:4px 10px;font-size:9pt;">'+r[1]+'</td></tr>';
+  });
+  html+='<tr><td colspan="2" style="color:#64748b;border:1px solid #e2e8f0;padding:4px 10px;font-size:8.5pt;">📌 LSL（下規格界限）≤ 量測值 ≤ USL（上規格界限）→ 合格；超出範圍 → NG（標紅）</td></tr>';
+  html+='</table>';
+  // 頁腳
+  html+='<table><tr><td style="border:none;height:12px;"></td></tr></table>';
+  html+='<table><tr><td style="color:#cbd5e1;font-size:8pt;text-align:center;border-top:1px solid #f1f5f9;padding-top:6px;">'+companyName+' | '+reportNo+' | 產生時間：'+now.toLocaleString('zh-TW')+'</td></tr></table>';
+
+  html+='</body></html>';
+
+  // 下載為 .xls
+  try{
+    var blob=new Blob([html],{type:'application/vnd.ms-excel;charset=utf-8'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    var fname2='IQC-'+id+'-'+(rec.sup||'')+'_'+
+      now.getFullYear()+(now.getMonth()+1).toString().padStart(2,'0')+now.getDate().toString().padStart(2,'0')+'.xls';
+    a.href=url;a.download=fname2;a.click();
+    setTimeout(function(){URL.revokeObjectURL(url);},3000);
+    toast('✅ Excel 已下載：'+fname2);
+  }catch(e){toast('下載失敗：'+e.message,true);console.error(e);}
+}
+
 function exportMeasReport(){
   var id=measId;
   var rec=H.find(function(r){return r.id===id;});
@@ -2533,8 +2930,7 @@ function exportMeasReport(){
   samples.forEach(function(s){s.features.forEach(function(f){if(featNames.indexOf(f.name)<0)featNames.push(f.name);});});
 
   function calcFS(fname){
-    var vals=[],ng=0,ok=0;
-    var f0=null;
+    var vals=[],ng=0,ok=0,f0=null;
     samples.forEach(function(s){
       var f=s.features.find(function(x){return x.name===fname;});
       if(!f0&&f)f0=f;
@@ -2548,7 +2944,7 @@ function exportMeasReport(){
       var cpk=calcCpk(vals,f0.lsl?parseFloat(f0.lsl):null,f0.usl?parseFloat(f0.usl):null);
       if(cpk!==null)cpkStr=cpk.toFixed(2);
     }
-    return{ok:ok,ng:ng,total:ok+ng,cpkStr:cpkStr,f0:f0||{}};
+    return{ok:ok,ng:ng,total:ok+ng,cpkStr:cpkStr,f0:f0,vals:vals};
   }
 
   var totalNG=0,totalOK=0;
@@ -2556,69 +2952,30 @@ function exportMeasReport(){
   var totalPts=totalOK+totalNG;
   var passRate=totalPts>0?(totalOK/totalPts*100).toFixed(1):'—';
 
-  function vBg(f,v){if(v===''||v===undefined)return'#f5f5f5';return calcValClass(f.lsl,f.usl,v)==='val-ng'?'#fee2e2':'#d1fae5';}
-  function vIcon(f,v){if(v===''||v===undefined)return'';return calcValClass(f.lsl,f.usl,v)==='val-ng'?'&#10007;':'&#10003;';}
-  function vC(f,v){if(v===''||v===undefined)return'#999';return calcValClass(f.lsl,f.usl,v)==='val-ng'?'#dc2626':'#059669';}
+  function vIcon(f,v){if(v===''||v===undefined)return'';return calcValClass(f.lsl,f.usl,v)==='val-ng'?'✗':'✓';}
 
   var now=new Date();
   var nowStr=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0');
   var reportNo='IQC-RPT-'+id+'-'+now.getFullYear()+(now.getMonth()+1).toString().padStart(2,'0');
-  var company=(document.querySelector('.logo-text')||{}).childNodes;
-  var companyName=company&&company[0]?company[0].textContent:'Solution Consultant Company';
+  var coEl=document.querySelector('.logo-text');
+  var companyName=coEl?coEl.textContent.trim():'Solution Consultant Company';
   var resultColor=rec.result==='合格'?'#059669':'#dc2626';
   var resultBg=rec.result==='合格'?'#d1fae5':'#fee2e2';
 
-  // Pivot table header
-  var th='<th style="width:28px;text-align:center;background:#1e3a5f;color:#fff;font-size:10px;padding:5px 3px;">#</th>';
-  th+='<th style="background:#1e3a5f;color:#fff;font-size:10px;padding:5px 6px;min-width:80px;">特徵點</th>';
-  th+='<th style="width:36px;text-align:center;background:#1e3a5f;color:#fff;font-size:10px;">LSL</th>';
-  th+='<th style="width:36px;text-align:center;background:#1e3a5f;color:#fff;font-size:10px;">USL</th>';
-  th+='<th style="width:26px;text-align:center;background:#1e3a5f;color:#fff;font-size:10px;">單位</th>';
-  samples.forEach(function(s){th+='<th style="width:34px;text-align:center;background:#1e3a5f;color:#fff;font-size:10px;padding:5px 2px;">#'+s.sampleNo+'</th>';});
-  th+='<th style="width:38px;text-align:center;background:#1e3a5f;color:#fff;font-size:10px;">Cpk</th>';
-  th+='<th style="width:48px;text-align:center;background:#1e3a5f;color:#fff;font-size:10px;">合格率</th>';
-
-  var tb='';
-  featNames.forEach(function(fname,fi){
-    var st=calcFS(fname);var f0=st.f0;
-    var rowBg=fi%2===0?'#fff':'#f8fafc';
-    var row='<tr style="background:'+rowBg+';">';
-    row+='<td style="text-align:center;color:#94a3b8;font-size:10px;padding:5px 3px;">'+(fi+1)+'</td>';
-    row+='<td style="font-size:11px;font-weight:600;color:#1e293b;padding:5px 6px;">'+fname+'<br><span style="font-size:9px;color:#94a3b8;font-weight:400;">'+(f0.type||'')+''+(f0.equip?' | '+f0.equip:'')+'</span></td>';
-    row+='<td style="text-align:center;font-size:10px;color:#475569;">'+(f0.lsl||'—')+'</td>';
-    row+='<td style="text-align:center;font-size:10px;color:#475569;">'+(f0.usl||'—')+'</td>';
-    row+='<td style="text-align:center;font-size:10px;color:#475569;">'+(f0.unit||'—')+'</td>';
-    samples.forEach(function(s){
-      var f=s.features.find(function(x){return x.name===fname;})||{value:'',lsl:f0.lsl,usl:f0.usl};
-      var bg=f.value!==''&&f.value!==undefined?vBg(f,f.value):'#f5f5f5';
-      row+='<td style="text-align:center;background:'+bg+';font-size:11px;font-weight:700;padding:4px 2px;">';
-      row+='<span style="display:block;">'+(f.value||'—')+'</span>';
-      row+='<span style="font-size:9px;color:'+vC(f,f.value)+';">'+vIcon(f,f.value)+'</span></td>';
-    });
-    var cpkNum=st.cpkStr!=='—'?parseFloat(st.cpkStr):null;
-    var cpkC=cpkNum!==null?(cpkNum>=1.33?'#059669':cpkNum>=1.0?'#d97706':'#dc2626'):'#94a3b8';
-    var fpct=st.total>0?(st.ok/st.total*100).toFixed(0)+'%':'—';
-    var fpC=st.ng>0?'#dc2626':'#059669';
-    row+='<td style="text-align:center;font-size:10px;font-weight:700;color:'+cpkC+';">'+st.cpkStr+'</td>';
-    row+='<td style="text-align:center;font-size:10px;font-weight:700;color:'+fpC+';">'+fpct+'</td>';
-    row+='</tr>';
-    tb+=row;
-  });
-
   var drawHtml='';
   if(drawings.length){
-    var maxImgW=drawings.length===1?'320px':'200px';
-    var maxImgH=drawings.length===1?'260px':'150px';
+    var maxW=drawings.length===1?'320px':'200px';
+    var maxH=drawings.length===1?'260px':'150px';
     drawHtml='<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;">';
     drawings.forEach(function(d,i){
-      drawHtml+='<div style="text-align:center;"><img src="'+d+'" style="max-width:'+maxImgW+';max-height:'+maxImgH+';border:1px solid #e2e8f0;border-radius:4px;object-fit:contain;display:block;"/><div style="font-size:9px;color:#94a3b8;margin-top:3px;">工程圖 '+(i+1)+'</div></div>';
+      drawHtml+='<div style="text-align:center;"><img src="'+d+'" style="max-width:'+maxW+';max-height:'+maxH+';border:1px solid #e2e8f0;border-radius:4px;object-fit:contain;display:block;"/><div style="font-size:9px;color:#94a3b8;margin-top:3px;">工程圖 '+(i+1)+'</div></div>';
     });
-    drawHtml+='</div>';
+    drawHtml+='</div><div style="border-top:1px dashed #e2e8f0;margin-bottom:8px;"></div>';
   }
 
   var noteHtml=rec.note?'<div style="margin-top:8px;padding:7px 10px;background:#fef9c3;border-left:3px solid #f59e0b;font-size:11px;"><b>備註：</b>'+rec.note+'</div>':'';
 
-  // Combined table header
+  // Build table header columns
   var thCols='';
   thCols+='<th style="width:22px;text-align:center;background:#1e3a5f;color:#fff;font-size:9px;padding:5px 2px;">#</th>';
   thCols+='<th style="background:#1e3a5f;color:#fff;font-size:9px;padding:5px 6px;min-width:70px;">特徵點</th>';
@@ -2630,20 +2987,15 @@ function exportMeasReport(){
   });
   thCols+='<th style="width:42px;text-align:center;background:#1d4ed8;color:#fff;font-size:9px;padding:4px 2px;">Mean<br>平均</th>';
   thCols+='<th style="width:42px;text-align:center;background:#6d28d9;color:#fff;font-size:9px;padding:4px 2px;">3&#963;<br>標準差</th>';
-  thCols+='<th style="width:42px;text-align:center;background:#065f46;color:#fff;font-size:9px;padding:4px 2px;">MAX<br>最大值</th>';
-  thCols+='<th style="width:42px;text-align:center;background:#991b1b;color:#fff;font-size:9px;padding:4px 2px;">MIN<br>最小值</th>';
+  thCols+='<th style="width:42px;text-align:center;background:#065f46;color:#fff;font-size:9px;padding:4px 2px;">MAX<br>最大値</th>';
+  thCols+='<th style="width:42px;text-align:center;background:#991b1b;color:#fff;font-size:9px;padding:4px 2px;">MIN<br>最小値</th>';
   thCols+='<th style="width:38px;text-align:center;background:#92400e;color:#fff;font-size:9px;padding:4px 2px;">R<br>範圍</th>';
   thCols+='<th style="width:36px;text-align:center;background:#1e3a5f;color:#fff;font-size:9px;">Cpk</th>';
   thCols+='<th style="width:42px;text-align:center;background:#1e3a5f;color:#fff;font-size:9px;">合格率</th>';
 
   var tbRows='';
   featNames.forEach(function(fname,fi){
-    var st=calcFS(fname);var f0=st.f0;
-    var vals=[];
-    samples.forEach(function(s){
-      var f=s.features.find(function(x){return x.name===fname;});
-      if(f&&f.value!==''&&f.value!==undefined){var v=parseFloat(f.value);if(!isNaN(v))vals.push(v);}
-    });
+    var st=calcFS(fname);var f0=st.f0;var vals=st.vals;
     var meanV='—',sig3='—',maxV='—',minV='—',rngV='—';
     if(vals.length){
       var avg=vals.reduce(function(a,b){return a+b;},0)/vals.length;
@@ -2651,10 +3003,7 @@ function exportMeasReport(){
       maxV=Math.max.apply(null,vals).toFixed(3);
       minV=Math.min.apply(null,vals).toFixed(3);
       rngV=(parseFloat(maxV)-parseFloat(minV)).toFixed(3);
-      if(vals.length>=2){
-        var va=vals.reduce(function(a,v){return a+(v-avg)*(v-avg);},0)/(vals.length-1);
-        sig3=(3*Math.sqrt(va)).toFixed(3);
-      }
+      if(vals.length>=2){var va=vals.reduce(function(a,v){return a+(v-avg)*(v-avg);},0)/(vals.length-1);sig3=(3*Math.sqrt(va)).toFixed(3);}
     }
     var cpkNum=st.cpkStr!=='—'?parseFloat(st.cpkStr):null;
     var cpkC=cpkNum!==null?(cpkNum>=1.33?'#059669':cpkNum>=1.0?'#d97706':'#dc2626'):'#94a3b8';
@@ -2670,23 +3019,22 @@ function exportMeasReport(){
     samples.forEach(function(s){
       var f=s.features.find(function(x){return x.name===fname;})||{value:'',lsl:f0.lsl,usl:f0.usl};
       var haVal=f.value!==''&&f.value!==undefined;
-      var isNG=haVal&&vIcon(f,f.value)==='✗';
+      var isNG=haVal&&calcValClass(f.lsl,f.usl,f.value)==='val-ng';
       var tc=isNG?'#dc2626':'#1e293b';
       row+='<td style="text-align:center;padding:4px 2px;background:'+rowBg+';">';
       row+='<span style="font-size:10px;font-weight:'+(isNG?'700':'400')+';color:'+tc+';">'+(haVal?f.value:'—')+'</span></td>';
     });
-    row+='<td style="text-align:center;font-size:10px;color:#374151;background:'+rowBg+';">'+meanV+'</td>';
-    row+='<td style="text-align:center;font-size:10px;color:#374151;background:'+rowBg+';">'+sig3+'</td>';
-    row+='<td style="text-align:center;font-size:10px;color:#374151;background:'+rowBg+';">'+maxV+'</td>';
-    row+='<td style="text-align:center;font-size:10px;color:#374151;background:'+rowBg+';">'+minV+'</td>';
-    row+='<td style="text-align:center;font-size:10px;color:#374151;background:'+rowBg+';">'+rngV+'</td>';
+    row+='<td style="text-align:center;font-size:10px;color:#374151;">'+meanV+'</td>';
+    row+='<td style="text-align:center;font-size:10px;color:#374151;">'+sig3+'</td>';
+    row+='<td style="text-align:center;font-size:10px;color:#374151;">'+maxV+'</td>';
+    row+='<td style="text-align:center;font-size:10px;color:#374151;">'+minV+'</td>';
+    row+='<td style="text-align:center;font-size:10px;color:#374151;">'+rngV+'</td>';
     row+='<td style="text-align:center;font-size:10px;font-weight:700;color:'+cpkC+';">'+st.cpkStr+'</td>';
     row+='<td style="text-align:center;font-size:10px;font-weight:700;color:'+fpC+';">'+fpct+'</td>';
     row+='</tr>';
     tbRows+=row;
   });
 
-  // CSS
   var html='<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>量測報告 '+reportNo+'</title><style>';
   html+='*{margin:0;padding:0;box-sizing:border-box;}body{font-family:"Segoe UI","Noto Sans TC",Arial,sans-serif;font-size:12px;color:#1e293b;background:#fff;}';
   html+='@page{size:A4 landscape;margin:12mm 10mm 12mm 10mm;}';
@@ -2705,10 +3053,8 @@ function exportMeasReport(){
   html+='.sec-hdr{background:#1e3a5f;color:#fff;font-size:10px;font-weight:700;padding:5px 10px;letter-spacing:.5px;}';
   html+='.pbtn{position:fixed;bottom:20px;right:20px;background:#1e3a5f;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3);}';
   html+='</style></head><body><div class="wrap">';
-
   html+='<div class="hdr"><div class="co">'+companyName+'<span>IQC QUALITY MANAGEMENT SYSTEM</span></div>';
   html+='<div class="ti"><h1>進料品質量測報告</h1><p>IQC Measurement Report | '+reportNo+'</p></div></div>';
-
   html+='<div class="ig">';
   html+='<div class="ic"><label>供應商</label><span>'+(rec.sup||'—')+'</span></div>';
   html+='<div class="ic"><label>供應商代號</label><span>'+(rec.supCode||'—')+'</span></div>';
@@ -2717,11 +3063,10 @@ function exportMeasReport(){
   html+='<div class="ic"><label>報告日期</label><span>'+nowStr+'</span></div>';
   html+='<div class="ic"><label>品名 / 工藝</label><span>'+(rec.pname||'—')+(partInfo.craft?' / '+partInfo.craft:'')+'</span></div>';
   html+='<div class="ic"><label>OQC 報告書號</label><span>'+(rec.oqc||'—')+'</span></div>';
-  html+='<div class="ic"><label>抽檢數</label><span>'+(rec.total||samples.length)+' 件</span></div>';
+  html+='<div class="ic"><label>抄檢數</label><span>'+(rec.total||samples.length)+' 件</span></div>';
   html+='<div class="ic"><label>合格 / 不合格</label><span><span style="color:#059669;">'+(rec.pass!=null?rec.pass:'—')+'</span> / <span style="color:#dc2626;">'+(rec.fail!=null?rec.fail:'—')+'</span></span></div>';
   html+='<div class="ic"><label>總判定</label><span class="badge">'+(rec.result==='合格'?'✅':'❌')+' '+(rec.result||'—')+'</span></div>';
   html+='</div>';
-
   html+='<div class="sb">';
   html+='<div class="sv"><div class="v" style="color:#1e3a5f;">'+samples.length+'</div><label>量測樣品</label></div>';
   html+='<div class="sv"><div class="v" style="color:#1e3a5f;">'+featNames.length+'</div><label>特徵點數</label></div>';
@@ -2729,44 +3074,66 @@ function exportMeasReport(){
   html+='<div class="sv"><div class="v" style="color:'+(totalNG>0?'#dc2626':'#059669')+';">'+totalNG+'</div><label>不合格量測點</label></div>';
   html+='<div class="sv"><div class="v" style="color:'+(totalNG>0?'#dc2626':'#059669')+';">'+passRate+'%</div><label>量測合格率</label></div>';
   html+='</div>';
-
-  // Integrated section: Drawing + Table
   html+='<div class="sec-blk">';
   html+='<div class="sec-hdr">📐 工程圖 &amp; 量測明細 / 統計結果  Drawing &amp; Measurement Details + Statistics</div>';
   html+='<div style="padding:10px 12px;background:#fff;">';
-  if(drawings.length){html+=drawHtml+'<div style="border-top:1px dashed #e2e8f0;margin-bottom:8px;"></div>';}
+  html+=drawHtml;
   html+='<table class="mt"><thead><tr>'+thCols+'</tr></thead><tbody>'+tbRows+'</tbody></table>';
   html+='</div></div>';
-
   html+=noteHtml;
-
-  // 外觀確認 (always 良好)
   html+='<div style="display:flex;align-items:center;gap:24px;padding:8px 14px;border:1px solid #e2e8f0;border-radius:6px;margin-top:10px;margin-bottom:10px;background:#fff;">';
   html+='<span style="font-size:11px;font-weight:700;color:#1e293b;">外觀確認 Visual Inspection：</span>';
   html+='<span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#059669;"><span style="width:16px;height:16px;border:2px solid #059669;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;background:#d1fae5;font-size:11px;">✓</span> 良好 Good</span>';
   html+='<span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#94a3b8;"><span style="width:16px;height:16px;border:2px solid #94a3b8;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;background:#fff;"></span> 不良 Defective</span>';
   html+='</div>';
-
-  // 簽核欄
   html+='<div class="sig">';
   html+='<div class="sbox"><div class="sline"></div><label>檢驗員 Inspector</label></div>';
   html+='<div class="sbox"><div class="sline"></div><label>審核者 Reviewer</label></div>';
   html+='<div class="sbox" style="flex:0.5;"><div class="sline"></div><label>日期 Date</label></div>';
   html+='</div>';
-
-  // 外觀確認品項說明 (bottom, black text)
   html+='<div style="margin-top:14px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;">';
   html+='<div style="background:#1e3a5f;color:#fff;font-size:10px;font-weight:700;padding:5px 10px;letter-spacing:.5px;">外觀確認品項說明  Visual Inspection Criteria</div>';
-  html+='<div style="padding:8px 12px;background:#fff;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 20px;">';
-  var vi=[['1. 外觀整潔度  Cleanliness','表面乾淨，無污漬、灰塵  Surface clean, no stains or dust'],['2. 表面缺陷  Surface Defects','無刮傷、裂痕、凹陷或破損  No scratches, cracks, dents, or damages'],['3. 顏色與塗裝  Color & Coating','顏色均勻無色差，塗層完整  Color even, coating intact'],['4. 尺寸與形狀  Dimensions & Shape','尺寸正確，形狀無變形  Correct size, shape intact'],['5. 組裝狀況  Assembly','零件齊全，安裝牢固  All parts complete, firmly assembled'],['6. 標籤與標籤  Labels & Markings','標籤清晰，黏貼正確  Labels clear and properly applied'],['7. 功能外觀  Functional Appearance','按鍵、插孔完整，透明件無刮傷  Buttons and sockets intact, transparent parts scratch-free']];
+  html+='<div style="padding:8px 12px;background:#fff;color:#1e293b;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 20px;">';
+  var vi=[
+    ['1. 外觀整潔度  Cleanliness','表面乾淨，無污漬、炁鹭  Surface clean, no stains or dust'],
+    ['2. 表面缺陷  Surface Defects','無劒傷、裂痕、凹陥或破損  No scratches, cracks, dents, or damages'],
+    ['3. 顏色與彈裝  Color &amp; Coating','顏色均勻無色差，彈層完整  Color even, coating intact'],
+    ['4. 尺寸與形狀  Dimensions &amp; Shape','尺寸正確，形狀無變形  Correct size, shape intact'],
+    ['5. 組裝狀況  Assembly','零件齊全，安裝牢固  All parts complete, firmly assembled'],
+    ['6. 標籤與標記  Labels &amp; Markings','標籤清晰，鮸貼正確  Labels clear and properly applied'],
+    ['7. 功能外觀  Functional Appearance','按鍵、插孔完整，透明件無劒傷  Buttons and sockets intact, transparent parts scratch-free']
+  ];
   vi.forEach(function(item){html+='<div style="font-size:10px;color:#374151;padding:3px 0;border-bottom:1px solid #f1f5f9;"><b style="color:#1e3a5f;">'+item[0]+'</b> – '+item[1]+'</div>';});
   html+='</div></div></div>';
-
+  html+='<div style="margin-top:10px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;">';
+  html+='<div style="background:#1e3a5f;color:#fff;font-size:10px;font-weight:700;padding:5px 10px;letter-spacing:.5px;">📊 量測分析說明  Measurement Analysis Reference</div>';
+  html+='<div style="padding:8px 12px;background:#fff;">';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:8px;">';
+  var anaItems=[
+    ['Mean（平均值）','所有量測值的算術平均，代表製程中心趨勢'],
+    ['3σ（三倍標準差）','量測值離散程度，越小代表製程越穩定'],
+    ['MAX / MIN','樣本最大值與最小值'],
+    ['R（全距）','MAX − MIN，反映批次內變異大小'],
+    ['Cpk（製程能力指數）','考量偏移後的雙邊製程能力，越高越好'],
+    ['合格率','本批次量測值落於 LSL～USL 範圍內的比例']
+  ];
+  anaItems.forEach(function(it){html+='<div style="font-size:10px;color:#374151;padding:3px 0;border-bottom:1px solid #f1f5f9;"><b style="color:#1e3a5f;">'+it[0]+'</b>　'+it[1]+'</div>';});
+  html+='</div>';
+  html+='<div style="font-size:10px;font-weight:700;color:#1e3a5f;margin-bottom:4px;">Cpk 判定基準</div>';
+  html+='<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+  [['Cpk ≥ 1.67','優良','#065f46','#d1fae5'],['Cpk ≥ 1.33','允收','#059669','#ecfdf5'],['Cpk ≥ 1.00','邊界（需監控）','#92400e','#fef9c3'],['Cpk < 1.00','製程能力不足（拒收）','#991b1b','#fff1f2']].forEach(function(r){
+    html+='<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;background:'+r[3]+';color:'+r[2]+';font-size:10px;font-weight:700;border:1px solid '+r[2]+';">'+r[0]+'　'+r[1]+'</span>';
+  });
+  html+='</div>';
+  html+='<div style="margin-top:6px;font-size:9.5px;color:#64748b;">📌 LSL（下規格界限）≤ 量測值 ≤ USL（上規格界限）→ 合格；超出範圍 → NG（標紅）</div>';
+  html+='</div></div>';
   html+='<div style="margin-top:12px;text-align:center;font-size:9px;color:#cbd5e1;border-top:1px solid #f1f5f9;padding-top:8px;">'+companyName+' | '+reportNo+' | 產生時間：'+now.toLocaleString('zh-TW')+'</div>';
   html+='</div>';
-  html+='<button class="pbtn no-print" onclick="window.print()">\u5217\u5370 / \u53e6\u5b58 PDF</button>';
+  html+='<div class="no-print" style="position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;align-items:flex-end;gap:8px;">';
+  html+='<div style="background:rgba(255,255,255,.92);backdrop-filter:blur(4px);border:1px solid #e2e8f0;border-radius:8px;padding:7px 12px;font-size:10.5px;color:#64748b;text-align:right;line-height:1.5;">💡 另存 PDF：列印對話框<br>→ 目標選<b style=\"color:#1e3a5f;\">「另存為 PDF」</b></div>';
+  html+='<button onclick="window.print()" style="background:#1e3a5f;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.2);">🖨️ 列印 / 另存 PDF</button>';
+  html+='</div>';
   html+='</body></html>';
-
   var w=window.open('','_blank','width=920,height=820');
   w.document.write(html);
   w.document.close();
@@ -3211,7 +3578,7 @@ function showPage(name){
     if(pg&&!pg.innerHTML.trim())pg.innerHTML=gsPageHTML();
   }
   document.getElementById('page-'+name).classList.add('active');
-  const idx=['dashboard','history','eval','npi','sqe','trend','health','gs','import','add','parts','users','guide'].indexOf(name);
+  const idx=['dashboard','history','eval','npi','sqe','trend','health','gs','import','add','parts','users','specctrl','guide'].indexOf(name);
   document.querySelectorAll('.sidebar button')[idx]?.classList.add('active');
   if(name==='dashboard')renderDashboard();
   else if(name==='history'){refreshSups();renderHistory();initAnalysisSups();}
@@ -3225,6 +3592,7 @@ function showPage(name){
   else if(name==='gs'){renderGsDashboard();renderGsList();renderLoanList();}
   else if(name==='users')renderUsers();
   else if(name==='guide'){}
+  else if(name==='specctrl'){scRenderList();scUpdateStats();}
 }
 
 // ═══════════════════════════════════════════════════
@@ -4060,16 +4428,27 @@ function renderCar(){
 function carGo(p){carPage=p;renderCar();}
 function showWeeklyAbnormal(){
   const now=new Date();
-  const wa=new Date(now.getTime()-7*86400000).toISOString().slice(0,10);
-  const td=now.toISOString().slice(0,10);
-  const cars=(CAR_DATA||[]).filter(function(d){return d.out&&d.out>=wa&&d.out<=td;}).sort(function(a,b){return (b.out||'').localeCompare(a.out||'');});
-  const d8s=(D8_DATA||[]).filter(function(d){return d.open&&d.open>=wa&&d.open<=td;}).sort(function(a,b){return (b.open||'').localeCompare(a.open||'');});
+  function toISO(d){return d.toISOString().slice(0,10);}
+  function startOfWeek(d){var wd=new Date(d);var day=wd.getDay()||7;wd.setDate(wd.getDate()-day+1);return wd;}
+
+  function getRangeByKey(k){
+    var s,e=toISO(now);
+    if(k==='week7'){s=toISO(new Date(now.getTime()-6*86400000));}
+    else if(k==='thisWeek'){s=toISO(startOfWeek(now));}
+    else if(k==='lastWeek'){var sw=startOfWeek(now);var lw=new Date(sw.getTime()-7*86400000);var le=new Date(sw.getTime()-86400000);s=toISO(lw);e=toISO(le);}
+    else if(k==='month30'){s=toISO(new Date(now.getTime()-29*86400000));}
+    else if(k==='thisMonth'){s=toISO(new Date(now.getFullYear(),now.getMonth(),1));}
+    else if(k==='lastMonth'){s=toISO(new Date(now.getFullYear(),now.getMonth()-1,1));e=toISO(new Date(now.getFullYear(),now.getMonth(),0));}
+    else{s=toISO(new Date(now.getTime()-6*86400000));}
+    return{s:s,e:e};
+  }
+
   function stTag(s){
-    var col=s&&(s.indexOf('\u95dc\u9589')>=0||s.indexOf('\u5df2\u56de\u8986')>=0)?'#059669':(s&&s.indexOf('\u903e\u671f')>=0?'#dc2626':'#f59e0b');
+    var col=s&&(s.indexOf('關閉')>=0||s.indexOf('已回覆')>=0)?'#059669':(s&&s.indexOf('逾期')>=0?'#dc2626':'#f59e0b');
     return '<span style="display:inline-block;padding:2px 10px;border-radius:11px;background:'+col+';color:#fff;font-size:11px;">'+esc(s||'-')+'</span>';
   }
   function rowsOf(arr,descF){
-    if(!arr.length)return '<div style="text-align:center;color:#94a3b8;padding:20px;font-size:13px;">\u672c\u9031\u7121\u8a18\u9304</div>';
+    if(!arr.length)return '<div style="text-align:center;color:#94a3b8;padding:20px;font-size:13px;">此區間無記錄</div>';
     return arr.map(function(d){
       var photos='';
       if(d.ngPhoto)photos+='<img src="'+d.ngPhoto+'" title="NG" style="width:46px;height:46px;border-radius:5px;object-fit:cover;border:2px solid #fecaca;cursor:zoom-in;margin-right:6px;" onclick="event.stopPropagation();viewImgSrc(this.src)">';
@@ -4079,26 +4458,80 @@ function showWeeklyAbnormal(){
           +'<div style="font-weight:700;color:#0f172a;min-width:120px;">'+esc(d.no||'')+'</div>'
           +'<div style="flex:1;font-size:13px;color:#475569;">'+esc(d.sup||'')+'</div>'
           +stTag(d.status)+'</div>'
-        +'<div style="font-size:12.5px;color:#334155;margin-bottom:'+(photos?'8px':'0')+';line-height:1.5;">'+esc(d[descF]||'\uff08\u7121\u8aaa\u660e\uff09')+'</div>'
+        +'<div style="font-size:12.5px;color:#334155;margin-bottom:'+(photos?'8px':'0')+';line-height:1.5;">'+esc(d[descF]||'（無說明）')+'</div>'
         +(photos?'<div style="display:flex;">'+photos+'</div>':'')+'</div>';
     }).join('');
   }
+
+  function renderContent(wa,td){
+    var fromEl=document.getElementById('_waFrom');
+    var toEl=document.getElementById('_waTo');
+    if(fromEl)fromEl.value=wa;
+    if(toEl)toEl.value=td;
+    var cars=(CAR_DATA||[]).filter(function(d){return d.out&&d.out>=wa&&d.out<=td;}).sort(function(a,b){return (b.out||'').localeCompare(a.out||'');});
+    var d8s=(D8_DATA||[]).filter(function(d){return d.open&&d.open>=wa&&d.open<=td;}).sort(function(a,b){return (b.open||'').localeCompare(a.open||'');});
+    var el=document.getElementById('_waContent');if(!el)return;
+    el.innerHTML=''
+      +'<div style="font-weight:700;color:#0e7490;font-size:14px;margin-bottom:6px;">📨 CAR（'+cars.length+'）</div>'
+      +'<div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:18px;">'+rowsOf(cars,'desc')+'</div>'
+      +'<div style="font-weight:700;color:#0e7490;font-size:14px;margin-bottom:6px;">📝 8D（'+d8s.length+'）</div>'
+      +'<div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">'+rowsOf(d8s,'title')+'</div>';
+  }
+
   const old=document.getElementById('_weekAbModal');if(old)old.remove();
   const mm=document.createElement('div');
   mm.id='_weekAbModal';
   mm.style.cssText='position:fixed;inset:0;z-index:1100;background:rgba(30,42,74,.55);display:flex;align-items:center;justify-content:center;padding:20px;';
   const box=document.createElement('div');
-  box.style.cssText='background:#fff;border-radius:14px;max-width:680px;width:100%;max-height:85vh;overflow:auto;padding:22px;box-sizing:border-box;';
-  box.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-weight:700;font-size:17px;color:#0f172a;">\u26a0\ufe0f \u4e0a\u9031\u7570\u5e38\u6982\u89bd</div><button id="_waClose" style="border:none;background:#eee;border-radius:6px;width:30px;height:30px;cursor:pointer;">\u2715</button></div>'
-    +'<div style="font-size:12px;color:#94a3b8;margin-bottom:16px;">'+wa+' \u81f3 '+td+'</div>'
-    +'<div style="font-weight:700;color:#0e7490;font-size:14px;margin-bottom:6px;">\ud83d\udce8 CAR\uff08'+cars.length+'\uff09</div>'
-    +'<div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:18px;">'+rowsOf(cars,'desc')+'</div>'
-    +'<div style="font-weight:700;color:#0e7490;font-size:14px;margin-bottom:6px;">\ud83d\udcdd 8D\uff08'+d8s.length+'\uff09</div>'
-    +'<div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">'+rowsOf(d8s,'title')+'</div>';
+  box.style.cssText='background:#fff;border-radius:14px;max-width:680px;width:100%;max-height:90vh;overflow:auto;padding:22px;box-sizing:border-box;';
+
+  const def=getRangeByKey('lastWeek');
+
+  box.innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+      +'<div style="font-weight:700;font-size:17px;color:#0f172a;">⚠️ 異常概覽</div>'
+      +'<button id="_waClose" style="border:none;background:#eee;border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:14px;">✕</button>'
+    +'</div>'
+    +'<div id="_waQuickRow" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;"></div>'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:8px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">'
+      +'<label style="font-size:12px;color:#475569;white-space:nowrap;">自定義：</label>'
+      +'<input id="_waFrom" type="date" value="'+def.s+'" style="border:1px solid #e2e8f0;border-radius:5px;padding:4px 8px;font-size:12px;color:#0f172a;">'
+      +'<span style="color:#94a3b8;font-size:12px;">至</span>'
+      +'<input id="_waTo" type="date" value="'+def.e+'" style="border:1px solid #e2e8f0;border-radius:5px;padding:4px 8px;font-size:12px;color:#0f172a;">'
+      +'<button id="_waQuery" style="background:#1e3a5f;color:#fff;border:none;padding:4px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;">查詢</button>'
+    +'</div>'
+    +'<div id="_waContent"></div>';
+
   mm.appendChild(box);
   mm.onclick=function(e){if(e.target===mm)mm.remove();};
   document.body.appendChild(mm);
   box.querySelector('#_waClose').onclick=function(){mm.remove();};
+  box.querySelector('#_waQuery').onclick=function(){
+    renderContent(document.getElementById('_waFrom').value,document.getElementById('_waTo').value);
+  };
+
+  // Build quick buttons via JS (avoid inline onclick escaping issues)
+  var quickList=[
+    {k:'week7',l:'近7天'},{k:'thisWeek',l:'本週'},{k:'lastWeek',l:'上週'},
+    {k:'month30',l:'近30天'},{k:'thisMonth',l:'本月'},{k:'lastMonth',l:'上月'}
+  ];
+  var qRow=box.querySelector('#_waQuickRow');
+  quickList.forEach(function(item){
+    var btn=document.createElement('button');
+    btn.textContent=item.l;
+    btn.dataset.key=item.k;
+    btn.style.cssText='padding:4px 12px;border-radius:6px;border:1px solid #e2e8f0;background:#f1f5f9;color:#475569;font-size:12px;cursor:pointer;font-weight:600;transition:all .15s;';
+    if(item.k==='lastWeek'){btn.style.background='#1e3a5f';btn.style.color='#fff';}
+    btn.addEventListener('click',function(){
+      qRow.querySelectorAll('button').forEach(function(x){x.style.background='#f1f5f9';x.style.color='#475569';});
+      btn.style.background='#1e3a5f';btn.style.color='#fff';
+      var r=getRangeByKey(item.k);
+      renderContent(r.s,r.e);
+    });
+    qRow.appendChild(btn);
+  });
+
+  renderContent(def.s,def.e);
 }
 function openCarModal(prefill){
   carEditId=null;
@@ -4527,6 +4960,22 @@ function renderHealthBoard(){
       events.push({date:a.date,module:'稽核',sup:a.sup,part:'',title:`${a.type} — 得分 ${a.score}`,detail:`稽核員: ${a.person||'—'}，Major: ${a.majorN||0}，Minor: ${a.minorN||0}，${a.summary?a.summary.slice(0,40)+'…':''}`,status:a.score>=75?'pass':a.score>=60?'warn':'fail',id:a.id,action:''});
     });
   }
+  if(type==='all'||type==='specctrl'){
+    const scData=typeof scRecords!=='undefined'?scRecords:(ls('iqc_specctrl1')||[]);
+    scData.filter(r=>{
+      const pnStr=(r.pns||[r.pn]).filter(Boolean).join(' ');
+      return match(pnStr)||match(r.customer||'')||match(r.supplier||'');
+    }).forEach(r=>{
+      const st=typeof scGetStatus==='function'?scGetStatus(r):(r.status==='closed'?'closed':new Date(r.date_end)<new Date()?'expired':r.status);
+      const stLabel={active:'進行中',pending:'待審核',closed:'已結案',expired:'已過期'}[st]||st;
+      const stStatus={active:'pass',pending:'warn',closed:'pass',expired:'fail'}[st]||'warn';
+      const pnDisplay=(r.pns||[r.pn]).filter(Boolean).join(' / ');
+      events.push({date:r.date_start||r.created||'',module:'特控',sup:r.supplier||r.customer||'',part:pnDisplay,
+        title:`${stLabel} — ${pnDisplay}`,
+        detail:`${r.reason_type}${r.dwg_rev?' | 圖面 '+r.dwg_rev:''}${r.date_end?' | 截止：'+r.date_end:''}${(r.inspections||[]).length?' | 已驗收 '+(r.inspections||[]).length+' 批':''}`,
+        status:stStatus,id:r.id,action:`<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="showPage('specctrl');setTimeout(()=>scOpenDetail(${r.id}),100)">→ 查看特控</button>`});
+    });
+  }
   events.sort((a,b)=>b.date.localeCompare(a.date));
 
   if(!events.length){el.innerHTML=`<div class="section"><div class="empty"><div class="empty-icon">✅</div><div class="empty-msg">找不到「${kw}」的相關記錄</div></div></div>`;return;}
@@ -4544,7 +4993,7 @@ function renderHealthBoard(){
   const modChips=Object.entries(modCount).map(([m,c])=>`<span class="tag tag-exempt">${m} × ${c}</span>`).join(' ');
 
   // Module color for dot
-  const modColor={IQC:'var(--accent)',NPI:'var(--npi)',CAR:'var(--fail)','8D':'var(--warn)','稽核':'var(--pass)','績效':'var(--text2)'};
+  const modColor={IQC:'var(--accent)',NPI:'var(--npi)',CAR:'var(--fail)','8D':'var(--warn)','稽核':'var(--pass)','績效':'var(--text2)','特控':'#7c3aed'};
 
   el.innerHTML=`
     <div class="section">
@@ -5266,6 +5715,733 @@ document.addEventListener('DOMContentLoaded',()=>{
   // 每分鐘更新通知徽章
   setInterval(updateNotifBadge, 60000);
 });
+</script>
+
+<!-- ════════════════════════════════════════════════════════
+     特控管制表 (SC) Module
+     ════════════════════════════════════════════════════════ -->
+<style>
+/* ── SC: Stats ── */
+.sc-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.sc-stat-card{background:#fff;border-radius:10px;border:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:12px;}
+.sc-stat-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.sc-stat-val{font-size:22px;font-weight:800;line-height:1;}
+.sc-stat-lbl{font-size:11px;color:var(--text2);margin-top:2px;}
+/* ── SC: List ── */
+.sc-list-hdr{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.sc-list-hdr h2{font-size:14px;font-weight:700;color:#1e3a5f;}
+.sc-ctl-card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:12px;cursor:pointer;transition:.15s;position:relative;overflow:hidden;}
+.sc-ctl-card:hover{border-color:var(--accent);box-shadow:0 2px 10px rgba(8,145,178,.12);}
+.sc-ctl-bar{position:absolute;left:0;top:0;bottom:0;width:5px;}
+.sc-ctl-bar.sc-active{background:#0891b2;}.sc-ctl-bar.sc-expired{background:#dc2626;}.sc-ctl-bar.sc-closed{background:#16a34a;}.sc-ctl-bar.sc-pending{background:#d97706;}
+.sc-ctl-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;padding-left:8px;}
+.sc-ctl-body{padding-left:8px;}
+.sc-ctl-items{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0;}
+.sc-item-chip{padding:3px 10px;border-radius:8px;font-size:11.5px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;}
+.sc-ctl-meta{font-size:11px;color:#94a3b8;display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;}
+/* ── SC: Badges ── */
+.sc-badge{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;}
+.sc-badge-active{background:#e0f2fe;color:#0369a1;}.sc-badge-expired{background:#fef2f2;color:#991b1b;}.sc-badge-closed{background:#d1fae5;color:#065f46;}.sc-badge-pending{background:#fef9c3;color:#92400e;}
+/* ── SC: Overlay / Modal ── */
+.sc-overlay{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:600;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+.sc-overlay.open{display:flex;}
+.sc-modal{background:#fff;border-radius:14px;width:100%;max-width:860px;margin:auto;overflow:hidden;}
+.sc-modal-hdr{background:#1e3a5f;color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+.sc-modal-hdr h2{font-size:15px;font-weight:700;}
+.sc-modal-close{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;opacity:.7;line-height:1;}
+.sc-modal-close:hover{opacity:1;}
+.sc-modal-body{padding:20px 24px;display:flex;flex-direction:column;gap:18px;max-height:80vh;overflow-y:auto;}
+.sc-modal-footer{border-top:1px solid var(--border);padding:14px 24px;display:flex;gap:10px;justify-content:flex-end;}
+/* ── SC: Form sections ── */
+.sc-stitle{font-size:12px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.6px;padding:8px 12px;background:#f8fafc;border-radius:8px;border-left:3px solid #0891b2;margin-bottom:10px;}
+.sc-fg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.sc-fg-grid.cols3{grid-template-columns:1fr 1fr 1fr;}
+.sc-fg{display:flex;flex-direction:column;gap:4px;}
+.sc-fg.span2{grid-column:span 2;}.sc-fg.span3{grid-column:span 3;}
+.sc-fg label{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.4px;}
+.sc-fg input,.sc-fg select,.sc-fg textarea{border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px;font-size:13px;color:#1e293b;outline:none;transition:.15s;background:#fff;width:100%;}
+.sc-fg input:focus,.sc-fg select:focus,.sc-fg textarea:focus{border-color:#0891b2;box-shadow:0 0 0 3px rgba(8,145,178,.1);}
+.sc-fg textarea{resize:vertical;line-height:1.6;}
+/* ── SC: Spec table ── */
+.sc-tbl-wrap{border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;}
+.sc-tbl{width:100%;border-collapse:collapse;}
+.sc-tbl th{background:#f8fafc;padding:9px 10px;font-size:11px;font-weight:700;color:#64748b;text-align:left;border-bottom:1px solid #e2e8f0;text-transform:uppercase;}
+.sc-tbl td{padding:8px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
+.sc-tbl tr:last-child td{border-bottom:none;}
+.sc-tbl input,.sc-tbl select{border:1px solid #e2e8f0;border-radius:5px;padding:5px 8px;font-size:12.5px;width:100%;outline:none;}
+.sc-tbl input:focus,.sc-tbl select:focus{border-color:#0891b2;}
+.sc-td-del{width:32px;text-align:center;}
+.sc-td-del button{background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;line-height:1;}
+.sc-add-row{margin-top:8px;padding:6px 14px;border:1.5px dashed #0891b2;border-radius:7px;background:#f0f9ff;color:#0891b2;font-size:12.5px;font-weight:700;cursor:pointer;width:100%;}
+/* ── SC: Inspection cards ── */
+.sc-insp-card{border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:10px;background:#f8fafc;}
+.sc-insp-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.sc-insp-lot{font-weight:700;font-size:13px;}
+.sc-result-tag{padding:3px 10px;border-radius:8px;font-size:11.5px;font-weight:700;}
+.sc-result-tag.pass{background:#d1fae5;color:#065f46;}.sc-result-tag.partial{background:#fef9c3;color:#92400e;}.sc-result-tag.fail{background:#fef2f2;color:#991b1b;}
+.sc-meas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;}
+.sc-meas-chip{padding:5px 8px;border-radius:7px;font-size:12px;text-align:center;border:1px solid #e2e8f0;background:#fff;}
+.sc-meas-chip .sc-val{font-weight:700;font-size:14px;display:block;line-height:1.2;}
+.sc-meas-chip.ok{border-color:#86efac;background:#f0fdf4;color:#065f46;}.sc-meas-chip.ng{border-color:#fca5a5;background:#fef2f2;color:#991b1b;}
+/* ── SC: Paste area ── */
+.sc-paste{border:2px dashed #cbd5e1;border-radius:8px;padding:10px;font-size:12px;font-family:monospace;color:#334155;min-height:70px;width:100%;outline:none;resize:vertical;transition:.2s;line-height:1.7;}
+.sc-paste:focus{border-color:#0891b2;border-style:solid;}
+/* ── SC: Buttons ── */
+.sc-btn-p{padding:9px 22px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;}
+.sc-btn-s{padding:9px 16px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;cursor:pointer;}
+.sc-btn-d{padding:7px 14px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:12px;cursor:pointer;}
+.sc-btn-new{padding:8px 18px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;}
+/* ── SC: Detail ── */
+.sc-det-sec{margin-bottom:16px;}
+.sc-det-sec h3{font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #f1f5f9;}
+.sc-det-row{display:flex;gap:8px;margin-bottom:6px;font-size:13px;}
+.sc-det-row .sc-lbl{color:#94a3b8;width:90px;flex-shrink:0;font-weight:600;}
+.sc-det-row .sc-val{color:#1e293b;flex:1;line-height:1.6;}
+/* ── SC: PN Tags ── */
+.sc-pn-wrap{display:flex;flex-wrap:wrap;gap:6px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;min-height:38px;cursor:text;transition:.15s;}
+.sc-pn-wrap:focus-within{border-color:#0891b2;box-shadow:0 0 0 3px rgba(8,145,178,.1);}
+.sc-pn-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:12.5px;font-weight:700;border:1px solid #bfdbfe;}
+.sc-pn-tag .sc-rm{cursor:pointer;opacity:.6;font-size:14px;line-height:1;}
+.sc-pn-tag .sc-rm:hover{opacity:1;}
+.sc-pn-input{border:none;outline:none;font-size:13px;color:#1e293b;flex:1;min-width:100px;padding:2px 4px;background:transparent;}
+/* ── SC: Photo ── */
+.sc-drop-zone{border:2px dashed #cbd5e1;border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:.2s;background:#f8fafc;position:relative;}
+.sc-drop-zone:hover,.sc-drop-zone.drag-over{border-color:#0891b2;background:#f0f9ff;}
+.sc-drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.sc-drop-icon{font-size:28px;margin-bottom:6px;}
+.sc-drop-zone p{font-size:12.5px;color:#64748b;margin:0;}
+.sc-count-badge{font-size:11px;font-weight:700;color:#0891b2;margin-top:4px;}
+.sc-photo-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px;}
+.sc-photo-thumb{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;cursor:pointer;}
+.sc-photo-thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:.2s;}
+.sc-photo-thumb:hover img{opacity:.85;}
+.sc-photo-thumb .sc-del-ph{position:absolute;top:4px;right:4px;background:rgba(220,38,38,.85);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;line-height:20px;text-align:center;cursor:pointer;display:none;}
+.sc-photo-thumb:hover .sc-del-ph{display:block;}
+.sc-photo-thumb .sc-ph-lbl{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);color:#fff;font-size:9.5px;padding:2px 5px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* ── SC: Lightbox ── */
+.sc-lightbox{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:700;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
+.sc-lightbox.open{display:flex;}
+.sc-lightbox img{max-width:90vw;max-height:80vh;border-radius:8px;object-fit:contain;}
+.sc-lightbox .sc-lb-cap{color:#fff;font-size:13px;opacity:.8;}
+.sc-lightbox .sc-lb-close{position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:28px;cursor:pointer;}
+/* ── SC: Empty ── */
+.sc-empty{text-align:center;padding:48px;color:#94a3b8;}
+.sc-empty .sc-ei{font-size:48px;margin-bottom:12px;}
+@keyframes sc-slide-in{from{transform:translateY(-16px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.sc-modal{animation:sc-slide-in .2s ease;}
+</style>
+
+<!-- ── SC Form Modal ──────────────────────────────────────────────── -->
+<div class="sc-overlay" id="scFormOverlay" onclick="if(event.target===this)scCloseForm()">
+<div class="sc-modal" style="max-width:860px;" onclick="event.stopPropagation()">
+  <div class="sc-modal-hdr">
+    <h2 id="scFormTitle">新增特控管制表</h2>
+    <button class="sc-modal-close" onclick="scCloseForm()">✕</button>
+  </div>
+  <div class="sc-modal-body">
+    <!-- ① 基本資訊 -->
+    <div>
+      <div class="sc-stitle">① 基本資訊</div>
+      <div class="sc-fg-grid cols3">
+        <div class="sc-fg span3" style="grid-column:span 3;">
+          <label>料號 * <span style="font-weight:400;color:#94a3b8;">（可輸入多個料號，Enter 確認新增）</span></label>
+          <div class="sc-pn-wrap" id="scPnWrap" onclick="document.getElementById('scPnInput').focus()">
+            <input class="sc-pn-input" id="scPnInput" placeholder="輸入料號後按 Enter…" onkeydown="scAddPNOnEnter(event)" oninput="this.style.width=Math.max(120,this.value.length*9)+'px'">
+          </div>
+        </div>
+        <div class="sc-fg"><label>客戶</label><input type="text" id="sc_f_customer" placeholder="客戶名稱"></div>
+        <div class="sc-fg"><label>供應商</label><input type="text" id="sc_f_supplier" placeholder="供應商名稱"></div>
+        <div class="sc-fg"><label>現行圖面版次</label><input type="text" id="sc_f_dwg_rev" placeholder="如 Rev.A / D版"></div>
+        <div class="sc-fg"><label>特控有效起日</label><input type="date" id="sc_f_date_start"></div>
+        <div class="sc-fg"><label>特控有效截止日 *</label><input type="date" id="sc_f_date_end"></div>
+      </div>
+    </div>
+    <!-- ② 背景說明 -->
+    <div>
+      <div class="sc-stitle">② 背景說明 — 為何圖面/規格未更新</div>
+      <div class="sc-fg-grid">
+        <div class="sc-fg"><label>原因類型</label>
+          <select id="sc_f_reason_type">
+            <option>ECN 變更申請進行中</option>
+            <option>客戶口頭確認，書面中</option>
+            <option>客戶暫定允收（試產）</option>
+            <option>圖面版次發行延遲</option>
+            <option>雙方協商中</option>
+            <option>其他</option>
+          </select>
+        </div>
+        <div class="sc-fg"><label>允收依據（如 Email 日期 / 會議記錄）</label>
+          <input type="text" id="sc_f_evidence_ref" placeholder="如 Email 2026/06/15 James Liu 確認信">
+        </div>
+        <div class="sc-fg span2"><label>詳細說明</label>
+          <textarea id="sc_f_background" rows="3" placeholder="說明背景、雙方共識內容、圖面預計更新時間等…"></textarea>
+        </div>
+      </div>
+    </div>
+    <!-- ③ 特控項目 -->
+    <div>
+      <div class="sc-stitle">③ 特控管控項目</div>
+      <div class="sc-tbl-wrap">
+        <table class="sc-tbl" id="scSpecTable">
+          <thead><tr><th>管控項目</th><th>圖面規格</th><th>特控允收標準</th><th>管控方式</th><th>頻率</th><th></th></tr></thead>
+          <tbody id="scSpecTbody"></tbody>
+        </table>
+      </div>
+      <button class="sc-add-row" onclick="scAddSpecRow()">＋ 新增管控項目</button>
+    </div>
+    <!-- ④ 驗收記錄 -->
+    <div>
+      <div class="sc-stitle">④ 驗收佐證記錄（每批進料時填）</div>
+      <div id="scInspRecords"></div>
+      <button class="sc-add-row" onclick="scOpenAddInsp()" style="border-color:#059669;color:#059669;background:#f0fdf4;">＋ 新增批次驗收記錄</button>
+    </div>
+    <!-- ⑤ 照片 -->
+    <div>
+      <div class="sc-stitle">⑤ 佐證照片 <span style="font-weight:400;font-size:11px;color:#94a3b8;">（上限 5 張）</span></div>
+      <div class="sc-drop-zone" id="scMainDropZone" ondragover="scPhotoDragOver(event,'scMainDropZone')" ondragleave="scPhotoDragLeave('scMainDropZone')" ondrop="scPhotoDrop(event,'main')">
+        <input type="file" accept="image/*" multiple onchange="scPhotoFileChange(event,'main')">
+        <div class="sc-drop-icon">📷</div>
+        <p>點擊或拖曳圖片上傳</p>
+        <div class="sc-count-badge" id="scMainPhotoCount">0 / 5 張</div>
+      </div>
+      <div class="sc-photo-grid" id="scMainPhotoGrid"></div>
+    </div>
+    <!-- ⑥ 狀態 -->
+    <div>
+      <div class="sc-stitle">⑥ 狀態 &amp; 簽核</div>
+      <div class="sc-fg-grid cols3">
+        <div class="sc-fg"><label>狀態</label>
+          <select id="sc_f_status">
+            <option value="pending">待審核</option>
+            <option value="active">進行中（已核准）</option>
+            <option value="closed">已結案（圖面已更新）</option>
+          </select>
+        </div>
+        <div class="sc-fg"><label>建立人員</label><input type="text" id="sc_f_creator" placeholder="姓名"></div>
+        <div class="sc-fg"><label>主管核准</label><input type="text" id="sc_f_approver" placeholder="姓名（核准後填入）"></div>
+        <div class="sc-fg span2"><label>結案說明（結案後填）</label>
+          <input type="text" id="sc_f_close_note" placeholder="如 圖面 Rev.B 於 2026/07/01 正式發行">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sc-modal-footer">
+    <button class="sc-btn-s" onclick="scCloseForm()">取消</button>
+    <button class="sc-btn-p" onclick="scSaveRecord()">💾 儲存特控記錄</button>
+  </div>
+</div>
+</div>
+
+<!-- ── SC Inspection Modal ───────────────────────────────────────── -->
+<div class="sc-overlay" id="scInspOverlay" onclick="if(event.target===this)scCloseInsp()">
+<div class="sc-modal" style="max-width:560px;" onclick="event.stopPropagation()">
+  <div class="sc-modal-hdr" style="background:#065f46;">
+    <h2>新增批次驗收記錄</h2>
+    <button class="sc-modal-close" onclick="scCloseInsp()">✕</button>
+  </div>
+  <div class="sc-modal-body">
+    <div class="sc-fg-grid cols3">
+      <div class="sc-fg"><label>適用料號</label><select id="sc_i_pn"></select></div>
+      <div class="sc-fg"><label>批號</label><input type="text" id="sc_i_lot" placeholder="LOT-XXXXXXXX"></div>
+      <div class="sc-fg"><label>進料日期</label><input type="date" id="sc_i_date"></div>
+      <div class="sc-fg"><label>數量</label><input type="number" id="sc_i_qty" placeholder="件數"></div>
+    </div>
+    <div class="sc-fg-grid">
+      <div class="sc-fg"><label>驗收人員</label><input type="text" id="sc_i_inspector" placeholder="姓名"></div>
+      <div class="sc-fg"><label>整體結果</label>
+        <select id="sc_i_result">
+          <option value="pass">✅ PASS — 全部合格</option>
+          <option value="partial">⚠️ 條件允收</option>
+          <option value="fail">❌ FAIL — 不合格</option>
+        </select>
+      </div>
+    </div>
+    <div class="sc-fg">
+      <label>量測數據 <span style="font-weight:400;color:#94a3b8;">（手動輸入或貼上數值）</span></label>
+      <textarea class="sc-paste" id="sc_i_meas_raw" rows="4" placeholder="逐行輸入：外徑: 12.03 (11.95~12.08)&#10;或直接貼上數值（空格/逗號/換行分隔）"></textarea>
+      <button onclick="scParseMeasData()" style="margin-top:6px;padding:6px 14px;background:#0891b2;color:#fff;border:none;border-radius:6px;font-size:12.5px;cursor:pointer;font-weight:700;">⚙️ 解析量測數據</button>
+    </div>
+    <div id="scMeasPreview" style="display:none;">
+      <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:6px;">解析結果預覽</div>
+      <div id="scMeasChips" class="sc-meas-grid"></div>
+    </div>
+    <div class="sc-fg"><label>備註</label><textarea id="sc_i_note" rows="2" placeholder="特殊說明、條件允收原因等…"></textarea></div>
+    <div class="sc-fg">
+      <label>驗收照片 <span style="font-weight:400;color:#94a3b8;">（上限 5 張）</span></label>
+      <div class="sc-drop-zone" id="scInspDropZone" ondragover="scPhotoDragOver(event,'scInspDropZone')" ondragleave="scPhotoDragLeave('scInspDropZone')" ondrop="scPhotoDrop(event,'insp')">
+        <input type="file" accept="image/*" multiple onchange="scPhotoFileChange(event,'insp')">
+        <div class="sc-drop-icon">📷</div>
+        <p>點擊或拖曳圖片上傳</p>
+        <div class="sc-count-badge" id="scInspPhotoCount">0 / 5 張</div>
+      </div>
+      <div class="sc-photo-grid" id="scInspPhotoGrid"></div>
+    </div>
+  </div>
+  <div class="sc-modal-footer">
+    <button class="sc-btn-s" onclick="scCloseInsp()">取消</button>
+    <button class="sc-btn-p" onclick="scSaveInsp()">✅ 加入驗收記錄</button>
+  </div>
+</div>
+</div>
+
+<!-- ── SC Detail Modal ───────────────────────────────────────────── -->
+<div class="sc-overlay" id="scDetailOverlay" onclick="if(event.target===this)scCloseDetail()">
+<div class="sc-modal" style="max-width:760px;" onclick="event.stopPropagation()">
+  <div class="sc-modal-hdr" id="scDetailHdr">
+    <h2 id="scDetailTitle">特控管制表詳情</h2>
+    <button class="sc-modal-close" onclick="scCloseDetail()">✕</button>
+  </div>
+  <div class="sc-modal-body" id="scDetailBody"></div>
+  <div class="sc-modal-footer" id="scDetailFooter"></div>
+</div>
+</div>
+
+<!-- ── SC Lightbox ───────────────────────────────────────────────── -->
+<div class="sc-lightbox" id="scLightbox" onclick="scCloseLightbox()">
+  <button class="sc-lb-close" onclick="scCloseLightbox()">✕</button>
+  <img id="scLbImg" src="" alt="">
+  <div class="sc-lb-cap" id="scLbCaption"></div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════
+   特控管制表 (SC) Module
+   ════════════════════════════════════════════════════════ */
+var SC_SK='iqc_specctrl1';
+var scRecords=ls(SC_SK)||[];
+var scEditId=null;
+var scTempInspections=[];
+var scSpecRowCount=0;
+var scTempMainPhotos=[];
+var scTempInspPhotos=[];
+var scTempPNs=[];
+var SC_MAX=5;
+var scParsedMeas=[];
+
+function scEsc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function scToday(){return new Date().toISOString().slice(0,10);}
+function scSave(){lss(SC_SK,scRecords);}
+
+// ── PN Tags ──────────────────────────────────────────────────────────────
+function scAddPNOnEnter(e){
+  if(e.key==='Enter'||e.key===','){
+    e.preventDefault();
+    var v=e.target.value.trim().replace(/,/g,'');
+    if(v&&!scTempPNs.includes(v)){scTempPNs.push(v);scRenderPNTags();}
+    e.target.value='';
+  }
+  if(e.key==='Backspace'&&!e.target.value&&scTempPNs.length){scTempPNs.pop();scRenderPNTags();}
+}
+function scRemovePN(i){scTempPNs.splice(i,1);scRenderPNTags();}
+function scRenderPNTags(){
+  var wrap=document.getElementById('scPnWrap');
+  var input=document.getElementById('scPnInput');
+  Array.from(wrap.children).forEach(function(c){if(c!==input)c.remove();});
+  scTempPNs.forEach(function(pn,i){
+    var span=document.createElement('span');
+    span.className='sc-pn-tag';
+    span.innerHTML=scEsc(pn)+' <span class="sc-rm" onclick="scRemovePN('+i+')">×</span>';
+    wrap.insertBefore(span,input);
+  });
+  scUpdateInspPNSelect();
+}
+function scUpdateInspPNSelect(){
+  var sel=document.getElementById('sc_i_pn');
+  if(!sel)return;
+  var cur=sel.value;
+  sel.innerHTML=scTempPNs.map(function(pn){return '<option value="'+scEsc(pn)+'"'+(pn===cur?' selected':'')+'>'+scEsc(pn)+'</option>';}).join('');
+  if(!scTempPNs.length)sel.innerHTML='<option value="">（未填料號）</option>';
+}
+
+// ── Photo Upload ──────────────────────────────────────────────────────────
+function scPhotoDragOver(e,zoneId){e.preventDefault();document.getElementById(zoneId).classList.add('drag-over');}
+function scPhotoDragLeave(zoneId){document.getElementById(zoneId).classList.remove('drag-over');}
+function scPhotoDrop(e,target){
+  e.preventDefault();
+  var zoneId=target==='main'?'scMainDropZone':'scInspDropZone';
+  document.getElementById(zoneId).classList.remove('drag-over');
+  scAddPhotos(Array.from(e.dataTransfer.files),target);
+}
+function scPhotoFileChange(e,target){scAddPhotos(Array.from(e.target.files),target);e.target.value='';}
+function scAddPhotos(files,target){
+  var arr=target==='main'?scTempMainPhotos:scTempInspPhotos;
+  var remaining=SC_MAX-arr.length;
+  if(remaining<=0){alert('最多上傳 5 張照片');return;}
+  var toAdd=files.filter(function(f){return f.type.startsWith('image/');}).slice(0,remaining);
+  if(files.length>remaining)alert('已超過上限，只會加入前 '+remaining+' 張');
+  var pending=toAdd.length;if(!pending)return;
+  toAdd.forEach(function(file){
+    var reader=new FileReader();
+    reader.onload=function(ev){arr.push({dataUrl:ev.target.result,name:file.name});pending--;if(pending===0)scRenderPhotoGrid(target);};
+    reader.readAsDataURL(file);
+  });
+}
+function scRenderPhotoGrid(target){
+  var arr=target==='main'?scTempMainPhotos:scTempInspPhotos;
+  var gridId=target==='main'?'scMainPhotoGrid':'scInspPhotoGrid';
+  var countId=target==='main'?'scMainPhotoCount':'scInspPhotoCount';
+  document.getElementById(countId).textContent=arr.length+' / 5 張';
+  document.getElementById(gridId).innerHTML=arr.map(function(p,i){
+    return '<div class="sc-photo-thumb" onclick="scOpenLightbox(\''+target+'\','+i+')">'
+      +'<img src="'+p.dataUrl+'" alt="">'
+      +'<button class="sc-del-ph" onclick="event.stopPropagation();scDeletePhoto(\''+target+'\','+i+')">✕</button>'
+      +'<div class="sc-ph-lbl">'+scEsc(p.name)+'</div>'
+    +'</div>';
+  }).join('');
+}
+function scDeletePhoto(target,i){
+  var arr=target==='main'?scTempMainPhotos:scTempInspPhotos;
+  arr.splice(i,1);scRenderPhotoGrid(target);
+}
+function scOpenLightbox(target,i){
+  var arr=target==='main'?scTempMainPhotos:scTempInspPhotos;
+  if(!arr[i])return;
+  document.getElementById('scLbImg').src=arr[i].dataUrl;
+  document.getElementById('scLbCaption').textContent=arr[i].name+' ('+(i+1)+'/'+arr.length+')';
+  document.getElementById('scLightbox').classList.add('open');
+}
+function scOpenLightboxDirect(dataUrl,name){
+  document.getElementById('scLbImg').src=dataUrl;
+  document.getElementById('scLbCaption').textContent=name||'';
+  document.getElementById('scLightbox').classList.add('open');
+}
+function scCloseLightbox(){document.getElementById('scLightbox').classList.remove('open');}
+function scResetPhotos(){scTempMainPhotos=[];scTempInspPhotos=[];scRenderPhotoGrid('main');scRenderPhotoGrid('insp');}
+function scLoadMainPhotos(photos){scTempMainPhotos=(photos||[]).slice();scRenderPhotoGrid('main');}
+
+// ── Spec Rows ─────────────────────────────────────────────────────────────
+function scAddSpecRow(data){
+  data=data||{};
+  var idx=scSpecRowCount++;
+  var tr=document.createElement('tr');
+  tr.id='sc-spec-row-'+idx;
+  tr.innerHTML=[
+    '<td><input type="text" placeholder="如：外徑、表面粗糙度" value="'+scEsc(data.item||'')+'"></td>',
+    '<td><input type="text" placeholder="如：12.00±0.05mm" value="'+scEsc(data.spec||'')+'"></td>',
+    '<td><input type="text" placeholder="如：12.00±0.08mm" value="'+scEsc(data.ctrl||'')+'"></td>',
+    '<td><select style="border:1px solid #e2e8f0;border-radius:5px;padding:5px;font-size:12px;width:100%;">'
+      +'<option'+(data.method==='100% 全檢'?' selected':'')+'>100% 全檢</option>'
+      +'<option'+(data.method==='抽樣（AQL 0.65）'?' selected':'')+'>抽樣（AQL 0.65）</option>'
+      +'<option'+(data.method==='抽樣（AQL 1.0）'?' selected':'')+'>抽樣（AQL 1.0）</option>'
+      +'<option'+(data.method==='首件確認'?' selected':'')+'>首件確認</option>'
+      +'<option'+(data.method==='量具量測'?' selected':'')+'>量具量測</option>'
+    +'</select></td>',
+    '<td><select style="border:1px solid #e2e8f0;border-radius:5px;padding:5px;font-size:12px;width:100%;">'
+      +'<option'+(data.freq==='每批'?' selected':'')+'>每批</option>'
+      +'<option'+(data.freq==='每週'?' selected':'')+'>每週</option>'
+      +'<option'+(data.freq==='首次導入'?' selected':'')+'>首次導入</option>'
+      +'<option'+(data.freq==='持續'?' selected':'')+'>持續</option>'
+    +'</select></td>',
+    '<td class="sc-td-del"><button onclick="scRemoveSpecRow(\'sc-spec-row-'+idx+'\')">✕</button></td>'
+  ].join('');
+  document.getElementById('scSpecTbody').appendChild(tr);
+}
+function scRemoveSpecRow(id){
+  var el=document.getElementById(id);
+  if(el&&document.getElementById('scSpecTbody').children.length>1)el.remove();
+}
+function scGetSpecRows(){
+  var rows=[];
+  document.getElementById('scSpecTbody').querySelectorAll('tr').forEach(function(tr){
+    var inputs=tr.querySelectorAll('input,select');
+    var item=inputs[0].value.trim();if(!item)return;
+    rows.push({item:item,spec:inputs[1].value,ctrl:inputs[2].value,method:inputs[3].value,freq:inputs[4].value});
+  });
+  return rows;
+}
+function scLoadSpecRows(rows){
+  document.getElementById('scSpecTbody').innerHTML='';
+  scSpecRowCount=0;
+  rows.forEach(function(r){scAddSpecRow(r);});
+  if(!rows.length)scAddSpecRow();
+}
+
+// ── Inspection ────────────────────────────────────────────────────────────
+function scOpenAddInsp(){
+  document.getElementById('sc_i_lot').value='';
+  document.getElementById('sc_i_date').value=scToday();
+  document.getElementById('sc_i_qty').value='';
+  document.getElementById('sc_i_inspector').value='';
+  document.getElementById('sc_i_result').value='pass';
+  document.getElementById('sc_i_meas_raw').value='';
+  document.getElementById('sc_i_note').value='';
+  document.getElementById('scMeasPreview').style.display='none';
+  scParsedMeas=[];
+  scTempInspPhotos=[];scRenderPhotoGrid('insp');
+  scUpdateInspPNSelect();
+  document.getElementById('scInspOverlay').classList.add('open');
+}
+function scCloseInsp(){document.getElementById('scInspOverlay').classList.remove('open');}
+function scParseMeasData(){
+  var raw=document.getElementById('sc_i_meas_raw').value.trim();if(!raw)return;
+  scParsedMeas=[];
+  var lines=raw.split('\n').filter(function(l){return l.trim();});
+  lines.forEach(function(line){
+    var m1=line.match(/^(.+?)[：:]\s*([\d.]+)\s*[\(（](.*?)[\)）]/);
+    if(m1){var label=m1[1].trim(),val=parseFloat(m1[2]),spec=m1[3].trim(),pass=scCheckSpec(val,spec);scParsedMeas.push({label:label,val:val,spec:spec,pass:pass});return;}
+    var m2=line.match(/^(.+?)[：:]\s*([\d.]+)/);
+    if(m2){scParsedMeas.push({label:m2[1].trim(),val:parseFloat(m2[2]),spec:'',pass:null});return;}
+    var nums=line.match(/[\d.]+/g)||[];
+    nums.forEach(function(n){scParsedMeas.push({label:'量測值',val:parseFloat(n),spec:'',pass:null});});
+  });
+  scRenderMeasPreview();
+}
+function scCheckSpec(val,spec){
+  var m1=spec.match(/([\d.]+)\s*[±]\s*([\d.]+)/);if(m1){var nom=parseFloat(m1[1]),tol=parseFloat(m1[2]);return val>=nom-tol&&val<=nom+tol;}
+  var m2=spec.match(/([\d.]+)\s*[~\-–]\s*([\d.]+)/);if(m2){return val>=parseFloat(m2[1])&&val<=parseFloat(m2[2]);}
+  var m3=spec.match(/[≤<=]+\s*([\d.]+)/);if(m3){return val<=parseFloat(m3[1]);}
+  var m4=spec.match(/[≥>=]+\s*([\d.]+)/);if(m4){return val>=parseFloat(m4[1]);}
+  return null;
+}
+function scRenderMeasPreview(){
+  document.getElementById('scMeasPreview').style.display='block';
+  document.getElementById('scMeasChips').innerHTML=scParsedMeas.map(function(m){
+    var cls=m.pass===null?'':m.pass?'ok':'ng';
+    var icon=m.pass===null?'':m.pass?'✓':'✗';
+    return '<div class="sc-meas-chip '+cls+'">'
+      +(m.label!=='量測值'?'<div style="font-size:10px;color:#64748b;margin-bottom:2px;">'+scEsc(m.label)+'</div>':'')
+      +'<span class="sc-val">'+icon+' '+m.val+'</span>'
+      +(m.spec?'<div style="font-size:10px;opacity:.7;">'+scEsc(m.spec)+'</div>':'')
+    +'</div>';
+  }).join('');
+  var hasNG=scParsedMeas.some(function(m){return m.pass===false;});
+  var hasKnown=scParsedMeas.some(function(m){return m.pass!==null;});
+  if(hasKnown){document.getElementById('sc_i_result').value=hasNG?'partial':'pass';}
+}
+function scSaveInsp(){
+  var lot=document.getElementById('sc_i_lot').value.trim();
+  if(!lot){alert('請填寫批號');return;}
+  var insp={id:Date.now(),lot:lot,pn:document.getElementById('sc_i_pn').value||scTempPNs[0]||'',
+    date:document.getElementById('sc_i_date').value,qty:document.getElementById('sc_i_qty').value,
+    inspector:document.getElementById('sc_i_inspector').value,result:document.getElementById('sc_i_result').value,
+    meas:scParsedMeas.slice(),photos:scTempInspPhotos.slice(),note:document.getElementById('sc_i_note').value};
+  scTempInspections.push(insp);
+  scRenderInspList();
+  scCloseInsp();
+}
+function scRenderInspList(){
+  var wrap=document.getElementById('scInspRecords');
+  if(!scTempInspections.length){wrap.innerHTML='';return;}
+  wrap.innerHTML=scTempInspections.map(function(insp,i){
+    var rClass={pass:'pass',partial:'partial',fail:'fail'}[insp.result];
+    var rLabel={pass:'PASS',partial:'條件允收',fail:'FAIL'}[insp.result];
+    var chips=insp.meas.slice(0,8).map(function(m){
+      var cls=m.pass===null?'':m.pass?'ok':'ng';
+      return '<div class="sc-meas-chip '+cls+'" style="padding:3px 7px;font-size:11px;">'
+        +(m.label!=='量測值'?'<span style="font-size:9px;display:block;color:#64748b;">'+scEsc(m.label)+'</span>':'')
+        +'<span class="sc-val" style="font-size:12px;">'+(m.pass===false?'✗ ':m.pass===true?'✓ ':'')+m.val+'</span>'
+      +'</div>';
+    }).join('');
+    return '<div class="sc-insp-card">'
+      +'<div class="sc-insp-hdr"><span class="sc-insp-lot">'+scEsc(insp.lot)+'</span>'
+      +'<span class="sc-result-tag '+rClass+'">'+rLabel+'</span>'
+      +'<span style="margin-left:auto;font-size:11px;color:#94a3b8;">'+insp.date+(insp.inspector?' | '+scEsc(insp.inspector):'')+(insp.qty?' | '+insp.qty+'件':'')+'</span>'
+      +'<button class="sc-btn-d" style="margin-left:8px;padding:3px 8px;font-size:11px;" onclick="scRemoveInsp('+i+')">移除</button></div>'
+      +(chips?'<div class="sc-meas-grid" style="margin-top:4px;">'+chips+'</div>':'')
+      +(insp.note?'<div style="font-size:11.5px;color:#64748b;margin-top:6px;">📝 '+scEsc(insp.note)+'</div>':'')
+    +'</div>';
+  }).join('');
+}
+function scRemoveInsp(i){scTempInspections.splice(i,1);scRenderInspList();}
+
+// ── Save Record ───────────────────────────────────────────────────────────
+function scSaveRecord(){
+  var typed=document.getElementById('scPnInput').value.trim();
+  if(typed&&!scTempPNs.includes(typed)){scTempPNs.push(typed);document.getElementById('scPnInput').value='';scRenderPNTags();}
+  if(!scTempPNs.length){alert('請至少輸入一個料號（Enter 確認）');return;}
+  var end=document.getElementById('sc_f_date_end').value;
+  if(!end){alert('請填寫特控截止日');return;}
+  var specs=scGetSpecRows();
+  if(!specs.length){alert('請至少填寫一項管控項目');return;}
+  var rec={id:scEditId||Date.now(),pn:scTempPNs[0],pns:scTempPNs.slice(),
+    customer:document.getElementById('sc_f_customer').value,
+    supplier:document.getElementById('sc_f_supplier').value,
+    dwg_rev:document.getElementById('sc_f_dwg_rev').value,
+    date_start:document.getElementById('sc_f_date_start').value,
+    date_end:end,
+    reason_type:document.getElementById('sc_f_reason_type').value,
+    evidence_ref:document.getElementById('sc_f_evidence_ref').value,
+    background:document.getElementById('sc_f_background').value,
+    specs:specs,photos:scTempMainPhotos.slice(),inspections:scTempInspections.slice(),
+    status:document.getElementById('sc_f_status').value,
+    creator:document.getElementById('sc_f_creator').value,
+    approver:document.getElementById('sc_f_approver').value,
+    close_note:document.getElementById('sc_f_close_note').value};
+  if(scEditId){var idx=scRecords.findIndex(function(r){return r.id===scEditId;});if(idx>=0)scRecords[idx]=rec;}
+  else{rec.created=scToday();scRecords.unshift(rec);}
+  scSave();scCloseForm();scRenderList();scUpdateStats();
+}
+
+// ── Form Open/Close ───────────────────────────────────────────────────────
+function scOpenNewForm(){
+  scEditId=null;scTempInspections=[];
+  document.getElementById('scFormTitle').textContent='新增特控管制表';
+  ['sc_f_customer','sc_f_supplier','sc_f_dwg_rev','sc_f_evidence_ref','sc_f_background','sc_f_creator','sc_f_approver','sc_f_close_note'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('sc_f_date_start').value=scToday();
+  document.getElementById('sc_f_date_end').value='';
+  document.getElementById('sc_f_reason_type').selectedIndex=0;
+  document.getElementById('sc_f_status').value='pending';
+  scTempPNs=[];scRenderPNTags();
+  scLoadSpecRows([]);scAddSpecRow();
+  scResetPhotos();scRenderInspList();
+  document.getElementById('scFormOverlay').classList.add('open');
+}
+function scOpenEditForm(id){
+  var r=scRecords.find(function(x){return x.id===id;});if(!r)return;
+  scEditId=id;scTempInspections=(r.inspections||[]).slice();
+  document.getElementById('scFormTitle').textContent='編輯特控：'+(r.pns||[r.pn]).filter(Boolean).join(' / ');
+  document.getElementById('sc_f_customer').value=r.customer||'';
+  document.getElementById('sc_f_supplier').value=r.supplier||'';
+  document.getElementById('sc_f_dwg_rev').value=r.dwg_rev||'';
+  document.getElementById('sc_f_date_start').value=r.date_start||'';
+  document.getElementById('sc_f_date_end').value=r.date_end||'';
+  document.getElementById('sc_f_evidence_ref').value=r.evidence_ref||'';
+  document.getElementById('sc_f_background').value=r.background||'';
+  document.getElementById('sc_f_creator').value=r.creator||'';
+  document.getElementById('sc_f_approver').value=r.approver||'';
+  document.getElementById('sc_f_close_note').value=r.close_note||'';
+  scSetSel('sc_f_reason_type',r.reason_type);scSetSel('sc_f_status',r.status);
+  scTempPNs=(r.pns||[r.pn]).filter(Boolean);scRenderPNTags();
+  scLoadSpecRows(r.specs||[]);
+  scLoadMainPhotos(r.photos||[]);
+  scRenderInspList();
+  document.getElementById('scFormOverlay').classList.add('open');
+}
+function scCloseForm(){document.getElementById('scFormOverlay').classList.remove('open');scEditId=null;}
+function scSetSel(id,val){var el=document.getElementById(id);for(var i=0;i<el.options.length;i++){if(el.options[i].value===val||el.options[i].text===val){el.selectedIndex=i;return;}}}
+
+// ── List & Stats ──────────────────────────────────────────────────────────
+var scStatusBadge={active:'sc-badge-active',pending:'sc-badge-pending',closed:'sc-badge-closed',expired:'sc-badge-expired'};
+var scStatusLabel={active:'進行中',pending:'待審核',closed:'已結案',expired:'已過期'};
+var scBarClass={active:'sc-active',pending:'sc-pending',closed:'sc-closed',expired:'sc-expired'};
+
+function scGetStatus(r){
+  if(r.status==='closed')return 'closed';
+  var end=new Date(r.date_end);var now=new Date();
+  if(end<now)return 'expired';
+  return r.status;
+}
+function scRenderList(){
+  var q=(document.getElementById('scSearchInput').value||'').toLowerCase();
+  var fs=document.getElementById('scFilterStatus').value;
+  var filtered=scRecords.filter(function(r){
+    var st=scGetStatus(r);
+    if(fs==='open'){if(st==='closed')return false;}
+    else if(fs&&st!==fs)return false;
+    var pnStr=(r.pns||[r.pn]).filter(Boolean).join(' ');
+    if(q&&!(pnStr+(r.customer||'')+(r.supplier||'')+(r.specs||[]).map(function(s){return s.item;}).join(' ')).toLowerCase().includes(q))return false;
+    return true;
+  });
+  var wrap=document.getElementById('scListContainer');
+  if(!filtered.length){wrap.innerHTML='<div class="sc-empty"><div class="sc-ei">'+(scRecords.length?'🔍':'📋')+'</div>'+(scRecords.length?'找不到符合記錄':'尚無特控記錄<br><span style="font-size:13px;">點擊右上角「＋ 新增特控」建立第一筆</span>')+'</div>';return;}
+  wrap.innerHTML=filtered.map(function(r){
+    var st=scGetStatus(r);
+    var end=new Date(r.date_end);var now=new Date();
+    var daysLeft=Math.ceil((end-now)/(1000*86400));
+    var daysStr=st==='closed'?'已結案':st==='expired'?'⚠️ 已過期 '+Math.abs(daysLeft)+'天':daysLeft<=14?'⏰ 剩 '+daysLeft+' 天':'剩 '+daysLeft+' 天';
+    var inspCount=(r.inspections||[]).length;
+    var lastInsp=(r.inspections||[]).slice(-1)[0];
+    var pnList=(r.pns||[r.pn]).filter(Boolean);
+    var pnChips=pnList.map(function(p){return '<span style="display:inline-block;padding:2px 9px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:12px;font-weight:700;margin-right:4px;">'+scEsc(p)+'</span>';}).join('');
+    var itemChips=(r.specs||[]).map(function(s){return '<span class="sc-item-chip">'+scEsc(s.item)+'</span>';}).join('');
+    return '<div class="sc-ctl-card" onclick="scOpenDetail('+r.id+')">'
+      +'<div class="sc-ctl-bar '+scBarClass[st]+'"></div>'
+      +'<div class="sc-ctl-top"><span style="font-size:18px;">📐</span>'+pnChips
+      +(r.customer?'<span style="font-size:12px;color:#64748b;margin-left:4px;">客戶：'+scEsc(r.customer)+'</span>':'')
+      +(r.supplier?'<span style="font-size:12px;color:#0369a1;margin-left:6px;">供應商：'+scEsc(r.supplier)+'</span>':'')
+      +'<span class="sc-badge '+scStatusBadge[st]+'" style="margin-left:auto;">'+scStatusLabel[st]+'</span></div>'
+      +'<div class="sc-ctl-body">'
+        +'<div style="font-size:12.5px;color:#475569;margin-bottom:4px;">'+scEsc(r.reason_type)+(r.dwg_rev?' | 圖面 '+scEsc(r.dwg_rev):'')+'</div>'
+        +'<div class="sc-ctl-items">'+itemChips+'</div>'
+        +'<div class="sc-ctl-meta">'
+          +'<span>📅 '+r.date_start+' → '+r.date_end+'</span>'
+          +'<span style="'+(daysLeft<=14&&st==='active'?'color:#d97706;font-weight:700;':'')+'">'+daysStr+'</span>'
+          +(inspCount?'<span>✅ 已驗收 '+inspCount+' 批'+(lastInsp?' | 最近：'+lastInsp.date:'')+'</span>':'<span style="color:#94a3b8;">尚無驗收記錄</span>')
+          +((r.photos||[]).length?'<span>📷 '+r.photos.length+' 張照片</span>':'')
+          +(r.creator?'<span>👤 '+scEsc(r.creator)+'</span>':'')
+        +'</div>'
+      +'</div>'
+    +'</div>';
+  }).join('');
+}
+function scUpdateStats(){
+  var now=new Date();var active=0,expiring=0,expired=0;
+  scRecords.forEach(function(r){
+    var st=scGetStatus(r);var end=new Date(r.date_end);var days=Math.ceil((end-now)/(1000*86400));
+    if(st==='active'){active++;if(days<=14)expiring++;}
+    if(st==='expired')expired++;
+  });
+  document.getElementById('sc-s-total').textContent=scRecords.length;
+  document.getElementById('sc-s-active').textContent=active;
+  document.getElementById('sc-s-expiring').textContent=expiring;
+  document.getElementById('sc-s-expired').textContent=expired;
+}
+
+// ── Detail ────────────────────────────────────────────────────────────────
+function scOpenDetail(id){
+  var r=scRecords.find(function(x){return x.id===id;});if(!r)return;
+  var st=scGetStatus(r);
+  var hdrColors={active:'#0369a1',pending:'#92400e',closed:'#065f46',expired:'#991b1b'};
+  document.getElementById('scDetailHdr').style.background=hdrColors[st]||'#1e3a5f';
+  var pnDisplay=(r.pns||[r.pn]).filter(Boolean).join(' / ');
+  document.getElementById('scDetailTitle').textContent='📐 特控：'+pnDisplay+' — '+scStatusLabel[st];
+  var specRows=(r.specs||[]).map(function(s){
+    return '<tr style="border-bottom:1px solid #f1f5f9;">'
+      +'<td style="padding:7px 10px;font-size:13px;font-weight:600;">'+scEsc(s.item)+'</td>'
+      +'<td style="padding:7px 10px;font-size:12.5px;color:#94a3b8;">'+scEsc(s.spec)+'</td>'
+      +'<td style="padding:7px 10px;"><span style="color:#dc2626;font-weight:700;">'+scEsc(s.ctrl)+'</span></td>'
+      +'<td style="padding:7px 10px;font-size:12px;">'+scEsc(s.method)+'</td>'
+      +'<td style="padding:7px 10px;font-size:12px;">'+scEsc(s.freq)+'</td>'
+    +'</tr>';
+  }).join('');
+  var inspHTML=(r.inspections||[]).length?
+    (r.inspections||[]).map(function(insp){
+      var rC={pass:'pass',partial:'partial',fail:'fail'}[insp.result];
+      var rL={pass:'PASS',partial:'條件允收',fail:'FAIL'}[insp.result];
+      var chips=(insp.meas||[]).map(function(m){
+        var cls=m.pass===null?'':m.pass?'ok':'ng';
+        return '<div class="sc-meas-chip '+cls+'">'+(m.label!=='量測值'?'<div style="font-size:9px;color:#64748b;">'+scEsc(m.label)+'</div>':'')+'<span class="sc-val">'+(m.pass===false?'✗ ':m.pass===true?'✓ ':'')+m.val+'</span>'+(m.spec?'<div style="font-size:9px;opacity:.6;">'+scEsc(m.spec)+'</div>':'')+'</div>';
+      }).join('');
+      var inspPhotos=(insp.photos||[]).length?'<div class="sc-photo-grid" style="margin-top:8px;">'+(insp.photos).map(function(p){return '<div class="sc-photo-thumb" onclick="scOpenLightboxDirect(\''+p.dataUrl+'\',\''+scEsc(p.name)+'\')"><img src="'+p.dataUrl+'" alt=""><div class="sc-ph-lbl">'+scEsc(p.name)+'</div></div>';}).join('')+'</div>':'';
+      return '<div class="sc-insp-card">'
+        +'<div class="sc-insp-hdr">'+(insp.pn?'<span style="padding:2px 8px;border-radius:6px;background:#dbeafe;color:#1d4ed8;font-size:11.5px;font-weight:700;margin-right:6px;">'+scEsc(insp.pn)+'</span>':'')+'<span class="sc-insp-lot">'+scEsc(insp.lot)+'</span><span class="sc-result-tag '+rC+'">'+rL+'</span><span style="margin-left:auto;font-size:11px;color:#94a3b8;">'+insp.date+(insp.inspector?' | '+scEsc(insp.inspector):'')+(insp.qty?' | '+insp.qty+'件':'')+'</span></div>'
+        +(chips?'<div class="sc-meas-grid">'+chips+'</div>':'')
+        +inspPhotos
+        +(insp.note?'<div style="font-size:11.5px;color:#64748b;margin-top:6px;">'+scEsc(insp.note)+'</div>':'')
+      +'</div>';
+    }).join('')
+    :'<div style="font-size:12.5px;color:#94a3b8;">尚無驗收記錄</div>';
+  document.getElementById('scDetailBody').innerHTML=
+    '<div class="sc-det-sec"><h3>基本資訊</h3>'
+      +scDRow('料號',(r.pns||[r.pn]).filter(Boolean).map(function(p){return '<span style="display:inline-block;padding:2px 9px;border-radius:8px;background:#dbeafe;color:#1d4ed8;font-size:12px;font-weight:700;margin-right:5px;">'+scEsc(p)+'</span>';}).join(''))
+      +scDRow('客戶',scEsc(r.customer))+scDRow('供應商',scEsc(r.supplier))+scDRow('圖面版次',scEsc(r.dwg_rev))+scDRow('有效期間',r.date_start+' → '+r.date_end)
+      +scDRow('建立',(r.created||'')+(r.creator?' | '+scEsc(r.creator):''))+(r.approver?scDRow('核准',scEsc(r.approver)):'')
+    +'</div>'
+    +'<div class="sc-det-sec"><h3>背景說明</h3>'
+      +scDRow('原因',scEsc(r.reason_type))+(r.evidence_ref?scDRow('允收依據','<span style="background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:6px;font-size:12px;">📎 '+scEsc(r.evidence_ref)+'</span>'):'')
+      +(r.background?'<div style="background:#f8fafc;border-radius:8px;padding:10px 12px;font-size:13px;color:#334155;line-height:1.7;white-space:pre-wrap;margin-top:6px;">'+scEsc(r.background)+'</div>':'')
+    +'</div>'
+    +'<div class="sc-det-sec"><h3>特控管控項目</h3>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#f8fafc;"><th style="padding:8px 10px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">管控項目</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">圖面規格</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">特控允收標準</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">管控方式</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">頻率</th></tr></thead><tbody>'+specRows+'</tbody></table>'
+    +'</div>'
+    +'<div class="sc-det-sec"><h3>驗收佐證記錄（共 '+(r.inspections||[]).length+' 批）</h3>'+inspHTML+'</div>'
+    +((r.photos||[]).length?'<div class="sc-det-sec"><h3>佐證照片（'+r.photos.length+' 張）</h3><div class="sc-photo-grid">'+(r.photos||[]).map(function(p){return '<div class="sc-photo-thumb" onclick="scOpenLightboxDirect(\''+p.dataUrl+'\',\''+scEsc(p.name)+'\')"><img src="'+p.dataUrl+'" alt=""><div class="sc-ph-lbl">'+scEsc(p.name)+'</div></div>';}).join('')+'</div></div>':'')
+    +(r.close_note?'<div style="background:#f0fdf4;border-radius:8px;padding:10px 14px;font-size:13px;color:#065f46;border:1px solid #86efac;"><strong>結案說明：</strong>'+scEsc(r.close_note)+'</div>':'');
+  document.getElementById('scDetailFooter').innerHTML=
+    '<button class="sc-btn-s" onclick="scCloseDetail()">關閉</button>'
+    +'<button class="sc-btn-d" onclick="scDeleteRecord('+r.id+')">🗑 刪除</button>'
+    +'<button class="sc-btn-p" onclick="scCloseDetail();scOpenEditForm('+r.id+')">✏️ 編輯</button>';
+  document.getElementById('scDetailOverlay').classList.add('open');
+}
+function scCloseDetail(){document.getElementById('scDetailOverlay').classList.remove('open');}
+function scDeleteRecord(id){
+  var r=scRecords.find(function(x){return x.id===id;});if(!r)return;
+  var pnDisplay=(r.pns||[r.pn]).filter(Boolean).join(' / ');
+  if(!confirm('確定刪除特控記錄「'+pnDisplay+'」？\n此操作無法復原。'))return;
+  scRecords=scRecords.filter(function(x){return x.id!==id;});
+  scSave();scCloseDetail();scRenderList();scUpdateStats();
+}
+function scDRow(l,v){return '<div class="sc-det-row"><span class="sc-lbl">'+l+'</span><span class="sc-val">'+v+'</span></div>';}
 </script>
 </body>
 </html>
