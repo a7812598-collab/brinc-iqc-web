@@ -6525,6 +6525,10 @@ function scDRow(l,v){return '<div class="sc-det-row"><span class="sc-lbl">'+l+'<
   .date-badge{display:none;}
   .btn,.btn-sm{min-height:40px;}
   .fi,input.fi,select.fi{min-height:42px;font-size:15px;}
+  /* Force all inline grids to single column on mobile */
+  .page [style*="grid-template-columns"],
+  .modal [style*="grid-template-columns"],
+  .section [style*="grid-template-columns"]{grid-template-columns:1fr!important;}
   /* iOS safe area for home indicator */
   .m-nav{padding-bottom:env(safe-area-inset-bottom,0);height:calc(68px + env(safe-area-inset-bottom,0));}
   main{padding-bottom:calc(88px + env(safe-area-inset-bottom,0));}
