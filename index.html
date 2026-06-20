@@ -2,7 +2,12 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0891b2">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Brinc IQC">
 <title>Brinc IQC 管理系統 v4.5</title>
 <style>
 :root{
@@ -6496,7 +6501,14 @@ function scDRow(l,v){return '<div class="sc-det-row"><span class="sc-lbl">'+l+'<
   .date-badge{display:none;}
   .btn,.btn-sm{min-height:40px;}
   .fi,input.fi,select.fi{min-height:42px;font-size:15px;}
+  /* iOS safe area for home indicator */
+  .m-nav{padding-bottom:env(safe-area-inset-bottom,0);height:calc(68px + env(safe-area-inset-bottom,0));}
+  main{padding-bottom:calc(88px + env(safe-area-inset-bottom,0));}
+  /* Inertia scroll */
+  main,.sc-modal-body,.modal-body{-webkit-overflow-scrolling:touch;}
 }
+/* Eliminate 300ms tap delay globally on mobile */
+@media(hover:none){*{touch-action:manipulation;}}
 </style>
 
 <nav class="m-nav" id="mobileNav">
